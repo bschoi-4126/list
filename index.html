@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>재고 관리 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --main-color: #007bff; --admin-color: #dc3545; }
+        body { font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; background: #f4f6f9; color: #333; }
+        .header { background: var(--main-color); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 1000; }
+        .admin-mode .header { background: var(--admin-color); }
+        .container { padding: 15px; max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .btn { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 14px; }
+        .btn-blue { background: var(--main-color); color: white; }
+        .btn-gray { background: #6c757d; color: white; }
+        .btn-red { background: var(--admin-color); color: white; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 10px; border-radius: 8px; margin-top: 10px; }
+        .admin-mode .admin-ui { display: block; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; }
+        .item-card { border-left: 5px solid var(--main-color); padding-left: 10px; margin-bottom: 10px; background: #fff; padding: 10px; border-radius: 5px; }
+        .admin-mode .item-card { border-left-color: var(--admin-color); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0">📦 재고 관리 시스템</h2>
+    <div id="auth-status" onclick="toggleAdmin()" style="font-size: 12px; margin-top: 5px; cursor: pointer;">🔐 직원 모드 (클릭하여 관리자 전환)</div>
+</div>
+
+<div class="container">
+    <div class="admin-ui">
+        <h4 style="margin:0; color:var(--admin-color);">🛠️ 관리자 도구</h4>
+        <button class="btn btn-gray" onclick="downloadTemplate()">양식 다운로드</button>
+        <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">리스트.xlsx 불러오기</button>
+        <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="loadExcel(event)">
+        <button class="btn btn-red" onclick="generateAllQRs()">모든 QR 생성 (ZIP)</button>
+        <div id="qr-status" style="font-size:12px; color:red; margin-top:5px;"></div>
+    </div>
+
+    <div class="card">
+        <div id="reader"></div>
+        <p id="scan-result" style="text-align:center; font-weight:bold; color:var(--main-color);"></p>
+    </div>
+
+    <div class="card" style="position: sticky; top: 70px; z-index: 900;">
+        <input type="text" id="search-input" placeholder="위치ID 또는 품명 검색..." onkeyup="filterTable()">
+    </div>
+
+    <div id="data-list">
+        <p style="text-align:center; color:#999;">데이터를 불러오거나 검색하세요.</p>
+    </div>
+
+    <div class="admin-ui" style="position: sticky; bottom: 20px;">
+        <button class="btn btn-red" onclick="exportToExcel()">수정 완료 후 리스트.xlsx 저장</button>
+    </div>
+</div>
+
+<div id="qrcode-hidden" style="display:none"></div>
+
+<script>
+let inventoryData = [];
+let isAdmin = false;
+const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '현재재고'];
+
+function toggleAdmin() {
+    if (!isAdmin) {
+        const pw = prompt("관리자 비밀번호를 입력하세요:");
+        if (pw === "4126") { // 깃허브 주소 숫자로 임시 설정
+            isAdmin = true;
+            document.body.classList.add('admin-mode');
+            document.getElementById('auth-status').innerText = "🔓 관리자 모드 활성화";
+            renderTable();
+        } else { alert("비밀번호가 틀렸습니다."); }
+    } else {
+        isAdmin = false;
+        document.body.classList.remove('admin-mode');
+        document.getElementById('auth-status').innerText = "🔐 직원 모드 (클릭하여 관리자 전환)";
+        renderTable();
+    }
+}
+
+function loadExcel(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        renderTable();
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function renderTable(filter = "") {
+    const listDiv = document.getElementById('data-list');
+    const filtered = inventoryData.filter(item => 
+        String(item['위치ID']).toLowerCase().includes(filter.toLowerCase()) || 
+        String(item['품목명'] || '').toLowerCase().includes(filter.toLowerCase())
+    );
+
+    let html = "";
+    filtered.slice(0, 100).forEach(row => {
+        html += `
+        <div class="item-card">
+            <div style="display:flex; justify-content:space-between;">
+                <small>${row['위치ID']}</small>
+                <b style="color:var(--main-color)">${row['현재재고']}개</b>
+            </div>
+            <div style="margin:5px 0;"><strong>${row['품목명'] || '-'}</strong></div>
+            ${isAdmin ? `
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <input type="number" value="${row['현재재고']}" onchange="updateStock('${row['위치ID']}', this.value)" style="margin:0;">
+            </div>` : ''}
+        </div>`;
+    });
+    listDiv.innerHTML = html || "<p style='text-align:center'>검색 결과가 없습니다.</p>";
+}
+
+function updateStock(locId, val) {
+    const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
+    if(item) item['현재재고'] = parseInt(val);
+}
+
+function filterTable() {
+    renderTable(document.getElementById('search-input').value);
+}
+
+function downloadTemplate() {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, "리스트.xlsx");
+}
+
+function exportToExcel() {
+    const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, "리스트.xlsx");
+}
+
+async function generateAllQRs() {
+    const zip = new JSZip();
+    const status = document.getElementById('qr-status');
+    const qrDiv = document.getElementById('qrcode-hidden');
+    for (let i = 0; i < inventoryData.length; i++) {
+        let locId = String(inventoryData[i]['위치ID']);
+        qrDiv.innerHTML = "";
+        new QRCode(qrDiv, { text: locId, width: 250, height: 250 });
+        await new Promise(r => setTimeout(r, 50));
+        const img = qrDiv.querySelector('img');
+        if(img) zip.file(`QR_${locId}.png`, img.src.split(',')[1], {base64: true});
+        status.innerText = `생성 중 (${i+1}/${inventoryData.length})`;
+    }
+    zip.generateAsync({type:"blob"}).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "QR_Codes.zip";
+        a.click();
+        status.innerText = "다운로드 완료";
+    });
+}
+
+const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+scanner.render((text) => {
+    document.getElementById('scan-result').innerText = "스캔됨: " + text;
+    document.getElementById('search-input').value = text;
+    renderTable(text);
+});
+</script>
+</body>
+</html>
