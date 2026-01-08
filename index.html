@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>재고 관리 시스템 - 앱 버전</title>
+    <title>재고 관리 시스템</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,14 +17,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root { --main-color: #007bff; --admin-color: #dc3545; --success-color: #28a745; --app-update: #6f42c1; }
         body { font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; background: #f4f6f9; color: #333; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         
-        /* 헤더 수정: 뒤로가기 버튼 공간 확보 */
         .header { 
             background: var(--main-color); 
             color: white; 
@@ -39,18 +37,16 @@
             padding-top: env(safe-area-inset-top);
         }
         .admin-mode .header { background: var(--admin-color); }
-        
         .back-btn { font-size: 20px; cursor: pointer; padding: 5px 10px; }
         
         .container { padding: 15px; max-width: 800px; margin: 0 auto; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .status-bar { font-size: 13px; padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; }
+        .status-bar { font-size: 13px; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; transition: 0.3s; }
         
         #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 1/1; border: 2px solid #ccc; }
         #scan-feedback { text-align: center; padding: 12px; margin-top: 8px; border-radius: 8px; font-weight: bold; background: #e9ecef; }
         
-        .btn { padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; transition: 0.2s; }
-        .btn:active { opacity: 0.7; }
+        .btn { padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; }
         .btn-blue { background: var(--main-color); color: white; }
         .btn-red { background: var(--admin-color); color: white; }
         .btn-green { background: var(--success-color); color: white; }
@@ -58,17 +54,14 @@
         .btn-gray { background: #6c757d; color: white; }
         
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 150px; font-family: monospace; font-size: 12px; resize: vertical; }
-        
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; }
         .admin-mode .admin-ui { display: block; }
         
         .item-card { border-left: 6px solid var(--main-color); padding: 15px; background: #fff; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
         
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 30px;}
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
         .page-btn { padding: 10px 15px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .page-btn:disabled { background: #eee; cursor: default; color: #999; }
     </style>
 </head>
 <body>
@@ -83,28 +76,26 @@
     <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 로딩 중...</div>
 
     <div class="admin-ui">
-        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 통합 설정</h4>
-        <input type="password" id="gh-token" placeholder="GitHub 토큰(ghp_...)">
+        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 설정</h4>
+        <input type="password" id="gh-token" placeholder="GitHub 토큰 입력">
         
         <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #ddd;">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold;">1. 데이터 및 양식 관리</p>
-            <button class="btn btn-gray" style="margin:0;" onclick="downloadTemplate()">기본 양식 받기</button>
-            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">새 엑셀 파일 불러오기</button>
+            <button class="btn btn-gray" onclick="downloadTemplate()">양식 다운로드</button>
+            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">엑셀 업로드</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
-            <button class="btn btn-red" onclick="generateAllQRs()">QR 코드 일괄 생성(ZIP)</button>
+            <button class="btn btn-red" onclick="generateAllQRs()">QR 일괄 생성</button>
             <div id="qr-status" style="font-size:10px; margin-top:5px; color:#666;"></div>
         </div>
 
         <div style="background:#fefefe; padding:10px; border-radius:8px; border:1px solid var(--app-update);">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">2. 프로그램(INDEX) 업데이트</p>
-            <textarea id="index-code" placeholder="새 소스코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
+            <textarea id="index-code" placeholder="업데이트할 소스코드를 붙여넣으세요."></textarea>
+            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 소스코드 서버 업데이트</button>
         </div>
     </div>
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">QR을 스캔하면 자동으로 검색됩니다.</div>
+        <div id="scan-feedback">QR을 스캔하면 검색어로 입력됩니다.</div>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -115,7 +106,7 @@
     <div id="pagination-control" class="pagination"></div>
 
     <div class="admin-ui" style="position: sticky; bottom: 20px; z-index: 1000;">
-        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경된 재고 데이터 서버 저장</button>
+        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경 데이터 서버 저장</button>
     </div>
 </div>
 
@@ -130,12 +121,11 @@ const itemsPerPage = 50;
 const REPO = 'bschoi-4126/list';
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '규격', '단가', '현재재고', '재고금액'];
 
-// 1. 뒤로가기 제어 로직
 window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
-    // 뒤로가기 시 앱이 종료되는 것을 방지하기 위해 가짜 히스토리 추가
+    // 브라우저 뒤로가기 제어
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
@@ -143,16 +133,9 @@ window.onload = function() {
     };
 };
 
-function customBack() {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput.value !== "") {
-        searchInput.value = "";
-        filterTable();
-    } else {
-        if(confirm("앱을 종료하시겠습니까?")) {
-            window.close();
-        }
-    }
+function updateStatus(msg, bg) {
+    const el = document.getElementById('status-msg');
+    el.innerText = msg; el.style.background = bg;
 }
 
 function loadFromServer() {
@@ -164,13 +147,11 @@ function loadFromServer() {
         renderTable();
         startScanner();
     }).catch(() => {
-        updateStatus("❌ 서버 데이터 로드 실패", "#f8d7da");
+        // 데이터가 이미 로드된 경우(수동 업로드 등)에는 에러 메시지 생략
+        if (inventoryData.length === 0) {
+            updateStatus("⚠️ 서버 데이터가 없습니다. 파일을 업로드해주세요.", "#fff3cd");
+        }
     });
-}
-
-function updateStatus(msg, bg) {
-    const el = document.getElementById('status-msg');
-    el.innerText = msg; el.style.background = bg;
 }
 
 function renderTable(filter = "") {
@@ -179,6 +160,14 @@ function renderTable(filter = "") {
         String(item['위치ID'] || '').toLowerCase().includes(filter.toLowerCase()) || 
         String(item['규격'] || '').toLowerCase().includes(filter.toLowerCase())
     );
+
+    // [상태바 수정 로직] 데이터가 존재하면 상단 경고를 성공 메시지로 변경
+    if (inventoryData.length > 0) {
+        const currentMsg = document.getElementById('status-msg').innerText;
+        if (currentMsg.includes("데이터가 없습니다")) {
+            updateStatus("✅ 데이터 로드 완료", "#d4edda");
+        }
+    }
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     if (currentPage > totalPages) currentPage = 1;
@@ -205,6 +194,32 @@ function renderTable(filter = "") {
     });
     listDiv.innerHTML = html || "<p style='text-align:center; padding:30px; color:#999;'>결과가 없습니다.</p>";
     renderPagination(totalPages, filter);
+}
+
+function handleFileUpload(event) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        
+        // 상태바 즉시 업데이트
+        updateStatus("📂 로컬 파일 로드 완료 (서버 저장이 필요합니다)", "#d1ecf1");
+        
+        renderTable();
+        alert("데이터를 성공적으로 불러왔습니다.");
+    };
+    reader.readAsArrayBuffer(event.target.files[0]);
+}
+
+function customBack() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput.value !== "") {
+        searchInput.value = "";
+        filterTable();
+    } else {
+        if(confirm("앱을 종료하시겠습니까?")) window.close();
+    }
 }
 
 function renderPagination(totalPages, filter) {
@@ -239,12 +254,9 @@ function updateVal(locId, field, val) {
 async function pushIndexToGithub() {
     const token = document.getElementById('gh-token').value;
     const content = document.getElementById('index-code').value;
-    if(!token || !content) return alert("토큰과 코드를 입력하세요.");
-    if(!confirm("서버의 index.html을 교체하시겠습니까?")) return;
-    
+    if(!token || !content) return alert("정보를 모두 입력하세요.");
     const btn = document.getElementById('app-update-btn');
-    btn.disabled = true; btn.innerText = "업데이트 중...";
-
+    btn.disabled = true; btn.innerText = "처리 중...";
     try {
         const base64Content = btoa(unescape(encodeURIComponent(content)));
         const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
@@ -256,18 +268,16 @@ async function pushIndexToGithub() {
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "앱 업데이트", content: base64Content, sha: sha })
         });
-        if(putRes.ok) alert("✅ 앱 업데이트 성공! 잠시 후 새로고침하세요.");
-        else alert("❌ 업데이트 실패.");
-    } catch (err) { alert("에러: " + err.message); }
-    finally { btn.disabled = false; btn.innerText = "🚀 앱 소스코드 서버 업데이트"; }
+        if(putRes.ok) alert("✅ 업데이트 완료!");
+    } catch (err) { alert(err.message); }
+    finally { btn.disabled = false; btn.innerText = "🚀 소스코드 서버 업데이트"; }
 }
 
 async function pushToGithub() {
     const token = document.getElementById('gh-token').value;
-    if(!token) return alert("토큰을 입력하세요.");
+    if(!token) return alert("토큰이 없습니다.");
     const btn = document.getElementById('sync-btn');
-    btn.disabled = true; btn.innerText = "서버 저장 중...";
-
+    btn.disabled = true; btn.innerText = "저장 중...";
     try {
         const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
         const wb = XLSX.utils.book_new();
@@ -283,9 +293,12 @@ async function pushToGithub() {
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "데이터 업데이트", content: base64Content, sha: sha })
         });
-        if(putRes.ok) alert("✅ 데이터 저장 성공!");
-    } catch (err) { alert("에러: " + err.message); }
-    finally { btn.disabled = false; btn.innerText = "💾 변경된 재고 데이터 서버 저장"; }
+        if(putRes.ok) {
+            alert("✅ 서버 저장 성공!");
+            updateStatus("✅ 서버와 동기화됨", "#d4edda");
+        }
+    } catch (err) { alert(err.message); }
+    finally { btn.disabled = false; btn.innerText = "💾 변경 데이터 서버 저장"; }
 }
 
 function startScanner() {
@@ -294,8 +307,6 @@ function startScanner() {
     html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (text) => {
         document.getElementById('search-input').value = text;
         filterTable();
-        document.getElementById('scan-feedback').innerText = "✅ 스캔 성공: " + text;
-        setTimeout(() => { document.getElementById('scan-feedback').innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
     }).catch(() => {});
 }
 
@@ -314,18 +325,6 @@ function downloadTemplate() {
     const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
     XLSX.utils.book_append_sheet(wb, ws, "Data");
     XLSX.writeFile(wb, "리스트.xlsx");
-}
-
-function handleFileUpload(event) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        renderTable();
-        alert("데이터를 불러왔습니다. '서버 저장'을 눌러야 최종 반영됩니다.");
-    };
-    reader.readAsArrayBuffer(event.target.files[0]);
 }
 
 async function generateAllQRs() {
