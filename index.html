@@ -25,19 +25,20 @@
         #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; }
         .item-card { border-left: 5px solid var(--main-color); padding-left: 10px; margin-bottom: 10px; background: #fff; padding: 10px; border-radius: 5px; }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
+        .price-info { font-size: 13px; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h2 style="margin:0">📦 재고 관리 시스템</h2>
-    <div id="auth-status" onclick="toggleAdmin()" style="font-size: 12px; margin-top: 5px; cursor: pointer;">🔐 직원 모드 (클릭하여 관리자 전환)</div>
+    <div id="auth-status" onclick="toggleAdmin()" style="font-size: 12px; margin-top: 5px; cursor: pointer;">🔐 직원 모드 (전환하려면 클릭)</div>
 </div>
 
 <div class="container">
     <div class="admin-ui">
-        <h4 style="margin:0; color:var(--admin-color);">🛠️ 관리자 도구</h4>
-        <button class="btn btn-gray" onclick="downloadTemplate()">양식 다운로드</button>
+        <h4 style="margin:0; color:var(--admin-color);">🛠️ 관리자 설정</h4>
+        <button class="btn btn-gray" onclick="downloadTemplate()">기본 양식 다운로드</button>
         <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">리스트.xlsx 불러오기</button>
         <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="loadExcel(event)">
         <button class="btn btn-red" onclick="generateAllQRs()">모든 QR 생성 (ZIP)</button>
@@ -50,14 +51,14 @@
     </div>
 
     <div class="card" style="position: sticky; top: 70px; z-index: 900;">
-        <input type="text" id="search-input" placeholder="위치ID 또는 품명 검색..." onkeyup="filterTable()">
+        <input type="text" id="search-input" placeholder="위치ID 또는 규격 검색..." onkeyup="filterTable()">
     </div>
 
     <div id="data-list">
         <p style="text-align:center; color:#999;">데이터를 불러오거나 검색하세요.</p>
     </div>
 
-    <div class="admin-ui" style="position: sticky; bottom: 20px;">
+    <div class="admin-ui" style="position: sticky; bottom: 20px; z-index: 1000;">
         <button class="btn btn-red" onclick="exportToExcel()">수정 완료 후 리스트.xlsx 저장</button>
     </div>
 </div>
@@ -67,12 +68,13 @@
 <script>
 let inventoryData = [];
 let isAdmin = false;
-const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '현재재고'];
+// 요청하신 한글 컬럼 구성
+const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '규격', '단가', '현재재고', '재고금액'];
 
 function toggleAdmin() {
     if (!isAdmin) {
         const pw = prompt("관리자 비밀번호를 입력하세요:");
-        if (pw === "4126") { // 깃허브 주소 숫자로 임시 설정
+        if (pw === "4126") {
             isAdmin = true;
             document.body.classList.add('admin-mode');
             document.getElementById('auth-status').innerText = "🔓 관리자 모드 활성화";
@@ -81,7 +83,7 @@ function toggleAdmin() {
     } else {
         isAdmin = false;
         document.body.classList.remove('admin-mode');
-        document.getElementById('auth-status').innerText = "🔐 직원 모드 (클릭하여 관리자 전환)";
+        document.getElementById('auth-status').innerText = "🔐 직원 모드 (전환하려면 클릭)";
         renderTable();
     }
 }
@@ -101,31 +103,47 @@ function loadExcel(event) {
 function renderTable(filter = "") {
     const listDiv = document.getElementById('data-list');
     const filtered = inventoryData.filter(item => 
-        String(item['위치ID']).toLowerCase().includes(filter.toLowerCase()) || 
-        String(item['품목명'] || '').toLowerCase().includes(filter.toLowerCase())
+        String(item['위치ID'] || '').toLowerCase().includes(filter.toLowerCase()) || 
+        String(item['규격'] || '').toLowerCase().includes(filter.toLowerCase())
     );
 
     let html = "";
     filtered.slice(0, 100).forEach(row => {
+        const unitPrice = row['단가'] || 0;
+        const currentStock = row['현재재고'] || 0;
+        const totalAmount = unitPrice * currentStock; // 재고금액 자동계산
+
         html += `
         <div class="item-card">
             <div style="display:flex; justify-content:space-between;">
-                <small>${row['위치ID']}</small>
-                <b style="color:var(--main-color)">${row['현재재고']}개</b>
+                <small>${row['위치ID'] || '위치 미지정'}</small>
+                <b style="color:var(--main-color)">${currentStock}개</b>
             </div>
-            <div style="margin:5px 0;"><strong>${row['품목명'] || '-'}</strong></div>
+            <div style="margin:5px 0;"><strong>${row['규격'] || '-'}</strong></div>
+            <div class="price-info">
+                단가: ${unitPrice.toLocaleString()}원 | 
+                재고금액: <span style="color:var(--admin-color); font-weight:bold;">${totalAmount.toLocaleString()}원</span>
+            </div>
             ${isAdmin ? `
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <input type="number" value="${row['현재재고']}" onchange="updateStock('${row['위치ID']}', this.value)" style="margin:0;">
+            <div style="margin-top:10px;">
+                <label style="font-size:11px;">수량 변경:</label>
+                <input type="number" value="${currentStock}" onchange="updateValue('${row['위치ID']}', '현재재고', this.value)">
+                <label style="font-size:11px;">단가 변경:</label>
+                <input type="number" value="${unitPrice}" onchange="updateValue('${row['위치ID']}', '단가', this.value)">
             </div>` : ''}
         </div>`;
     });
-    listDiv.innerHTML = html || "<p style='text-align:center'>검색 결과가 없습니다.</p>";
+    listDiv.innerHTML = html || "<p style='text-align:center'>데이터가 없습니다.</p>";
 }
 
-function updateStock(locId, val) {
+function updateValue(locId, field, val) {
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
-    if(item) item['현재재고'] = parseInt(val);
+    if(item) {
+        item[field] = parseInt(val) || 0;
+        // 재고금액 컬럼도 실시간 업데이트
+        item['재고금액'] = (item['현재재고'] || 0) * (item['단가'] || 0);
+        renderTable(document.getElementById('search-input').value);
+    }
 }
 
 function filterTable() {
@@ -140,10 +158,15 @@ function downloadTemplate() {
 }
 
 function exportToExcel() {
+    // 저장 전 모든 항목의 재고금액 최종 계산
+    inventoryData.forEach(item => {
+        item['재고금액'] = (item['현재재고'] || 0) * (item['단가'] || 0);
+    });
     const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data");
     XLSX.writeFile(wb, "리스트.xlsx");
+    alert("수정된 데이터가 리스트.xlsx로 저장되었습니다.");
 }
 
 async function generateAllQRs() {
@@ -152,6 +175,7 @@ async function generateAllQRs() {
     const qrDiv = document.getElementById('qrcode-hidden');
     for (let i = 0; i < inventoryData.length; i++) {
         let locId = String(inventoryData[i]['위치ID']);
+        if(!locId || locId === 'undefined') continue;
         qrDiv.innerHTML = "";
         new QRCode(qrDiv, { text: locId, width: 250, height: 250 });
         await new Promise(r => setTimeout(r, 50));
