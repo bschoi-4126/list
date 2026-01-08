@@ -27,7 +27,7 @@
 
         .container { padding: 15px; max-width: 800px; margin: 0 auto; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: center; }
-        .status-bar { font-size: 13px; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; }
+        .status-bar { font-size: 13px; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; transition: 0.3s; }
 
         #camera-wrapper { width: 100%; position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 1/1; border: 3px solid var(--main-color); }
         video { width: 100%; height: 100%; object-fit: cover; }
@@ -39,16 +39,24 @@
         .btn-purple { background: var(--update-color); color: white; }
         
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 100px; font-family: monospace; font-size: 12px; }
 
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; text-align: left; }
         .admin-mode .admin-ui { display: block; }
 
+        /* 아이템 카드 디자인 균형 조정 */
         .item-card { border-left: 8px solid var(--main-color); padding: 15px; background: #fff; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: left; position: relative; }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
-        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; font-size: 13px; color: #555; }
-        .info-label { font-weight: bold; color: #888; margin-right: 5px; }
-        .stock-display { font-size: 24px; font-weight: bold; color: var(--main-color); position: absolute; top: 15px; right: 15px; }
+        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; font-size: 14px; color: #444; border-top: 1px solid #eee; padding-top: 10px; }
+        .info-label { font-weight: bold; color: #777; margin-right: 6px; }
+        .stock-display { font-size: 26px; font-weight: bold; color: var(--main-color); position: absolute; top: 15px; right: 15px; }
+        .item-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .item-spec { font-size: 13px; color: #666; margin-bottom: 2px; }
+
+        /* 재고수정 섹션 개선 */
+        .edit-box { margin-top: 15px; display: flex; gap: 8px; align-items: center; background: #fff0f0; padding: 10px; border-radius: 8px; }
+        .edit-label { font-size: 12px; font-weight: bold; color: #333; }
+        .edit-input { width: 80px !important; padding: 8px !important; margin: 0 !important; font-size: 14px !important; border: 1px solid #ddd !important; }
+        .apply-btn { width: auto !important; margin: 0 !important; padding: 8px 15px !important; font-size: 13px !important; flex-shrink: 0; background: var(--success-color); color: white; border-radius: 6px; border: none; font-weight: bold; }
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
         .page-btn { padding: 10px 18px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -99,7 +107,7 @@
     <div id="pagination-control" class="pagination"></div>
 
     <div class="admin-ui" style="position: sticky; bottom: 20px; z-index: 1000;">
-        <button class="btn btn-green" onclick="pushToGithub()">💾 변경된 데이터 서버 저장</button>
+        <button class="btn btn-green" onclick="pushToGithub()">💾 전체 데이터 서버 저장</button>
     </div>
 </div>
 
@@ -113,8 +121,8 @@ let currentPage = 1;
 let isScanning = false;
 const itemsPerPage = 50; 
 const REPO = 'bschoi-4126/list';
-// 품목명 추가된 헤더 정의
-const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '단가', '현재재고', '재고금액'];
+// 품목명 추가 및 명칭 변경
+const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '표준단가', '현재재고', '재고금액'];
 
 window.onload = function() {
     loadFromServer();
@@ -135,13 +143,12 @@ function loadFromServer() {
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
         inventoryData = rawData.map(item => {
-            // 위치 ID 자동 구성
             if (!item['위치ID']) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
                 item['위치ID'] = parts.join('-');
             }
-            // 재고 금액 자동 계산 로직 추가
-            item['재고금액'] = (parseInt(item['단가']) || 0) * (parseInt(item['현재재고']) || 0);
+            // 재고금액 자동 계산 (표준단가 x 현재재고)
+            item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
         });
 
@@ -230,28 +237,29 @@ function renderTable(filter = "") {
     let html = "";
     paginatedItems.forEach((row) => {
         const stock = parseInt(row['현재재고']) || 0;
-        const price = parseInt(row['단가']) || 0;
+        const price = parseInt(row['표준단가']) || 0;
+        const total = (stock * price).toLocaleString();
+        
+        // 아이템 카드 디자인
         html += `
         <div class="item-card">
             <div class="stock-display">${stock.toLocaleString()}개</div>
-            <div style="font-size:12px; color:#888;">ID: ${row['위치ID'] || '-'}</div>
-            <div style="font-size:18px; margin: 5px 0; width: 75%;"><strong>${row['품목명'] || ''}</strong></div>
-            <div style="font-size:14px; color:#666; margin-bottom:10px;">${row['규격'] || '-'}</div>
+            <div style="font-size:12px; color:#888; margin-bottom:4px;">ID: ${row['위치ID'] || '-'}</div>
+            <div class="item-title">${row['품목명'] || '품목명 없음'}</div>
+            <div class="item-spec">${row['규격'] || '-'}</div>
             
             <div class="item-info-grid">
+                <div><span class="info-label">품목코드:</span>${row['품목코드'] || '-'}</div>
                 <div><span class="info-label">위치:</span>${row['층'] || ''}F ${row['구역'] || ''}구역</div>
-                <div><span class="info-label">코드:</span>${row['품목코드'] || '-'}</div>
-                <div><span class="info-label">랙/단:</span>${row['랙'] || ''}-${row['단'] || ''}</div>
-                <div><span class="info-label">단가:</span>${price.toLocaleString()}원</div>
-                <div style="grid-column: span 2; color: #e67e22; font-weight:bold;">
-                    <span class="info-label">총 금액:</span>${(stock * price).toLocaleString()}원
-                </div>
+                <div><span class="info-label">표준단가:</span>${price.toLocaleString()}원</div>
+                <div style="color: #e67e22; font-weight:bold;"><span class="info-label">재고금액:</span>${total}원</div>
             </div>
 
             ${isAdmin ? `
-            <div style="margin-top:15px; display:flex; gap:10px; align-items:center; background:#fff0f0; padding:10px; border-radius:8px;">
-                <span style="font-size:12px; font-weight:bold;">재고수정:</span>
-                <input type="number" value="${stock}" style="margin:0; flex:1; padding:8px;" onchange="updateVal('${row['위치ID']}', this.value)">
+            <div class="edit-box">
+                <span class="edit-label">재고수정:</span>
+                <input type="number" id="input-${row['위치ID']}" value="${stock}" class="edit-input">
+                <button class="apply-btn" onclick="applyItemUpdate('${row['위치ID']}')">적용</button>
             </div>` : ''}
         </div>`;
     });
@@ -290,12 +298,30 @@ function customBack() {
     }
 }
 
-function updateVal(locId, val) {
+// [핵심] 개별 품목 수정 및 깃허브 자동 동기화 로직
+async function applyItemUpdate(locId) {
+    const inputEl = document.getElementById(`input-${locId}`);
+    if(!inputEl) return;
+    
+    const newVal = parseInt(inputEl.value) || 0;
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
+    
     if(item) {
-        item['현재재고'] = parseInt(val) || 0;
-        // 수정 시에도 재고 금액 자동 계산
-        item['재고금액'] = item['현재재고'] * (parseInt(item['단가']) || 0);
+        item['현재재고'] = newVal;
+        item['재고금액'] = item['현재재고'] * (parseInt(item['표준단가']) || 0);
+        
+        // UI 즉시 반영
+        renderTable(document.getElementById('search-input').value);
+        
+        // 토큰 확인 및 자동 저장 실행
+        const token = document.getElementById('gh-token').value;
+        if(!token) {
+            alert("GitHub 토큰을 먼저 입력해주세요.");
+            return;
+        }
+        
+        updateStatus("💾 데이터 자동 저장 중...", "#fff3cd");
+        await pushToGithub(true); // true 인자는 알림창 없이 진행용
     }
 }
 
@@ -309,9 +335,9 @@ function toggleAdmin() {
     }
 }
 
-async function pushToGithub() {
+async function pushToGithub(isAuto = false) {
     const token = document.getElementById('gh-token').value;
-    if(!token) return alert("토큰을 입력하세요.");
+    if(!token) return isAuto ? null : alert("토큰을 입력하세요.");
     localStorage.setItem('gh_token', token);
     
     const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
@@ -327,10 +353,16 @@ async function pushToGithub() {
         const putRes = await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "데이터 업데이트", content: base64Content, sha: sha })
+            body: JSON.stringify({ message: "Auto-update item stock", content: base64Content, sha: sha })
         });
-        if(putRes.ok) alert("✅ 서버 저장 성공!");
-    } catch (e) { alert("저장 실패: " + e.message); }
+        if(putRes.ok) {
+            updateStatus("✅ 서버 저장 완료", "#d4edda");
+            if(!isAuto) alert("✅ 서버 저장 성공!");
+        }
+    } catch (e) { 
+        updateStatus("❌ 저장 실패", "#f8d7da");
+        alert("저장 실패: " + e.message); 
+    }
 }
 
 async function pushIndexToGithub() {
@@ -346,7 +378,7 @@ async function pushIndexToGithub() {
         const putRes = await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "소스 업데이트", content: base64Content, sha: sha })
+            body: JSON.stringify({ message: "Update app code", content: base64Content, sha: sha })
         });
         if(putRes.ok) alert("✅ 소스코드 업데이트 성공!");
     } catch (e) { alert("업데이트 실패: " + e.message); }
@@ -363,8 +395,7 @@ function handleFileUpload(event) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
                 item['위치ID'] = parts.join('-');
             }
-            // 업로드 시에도 재고 금액 자동 계산
-            item['재고금액'] = (parseInt(item['단가']) || 0) * (parseInt(item['현재재고']) || 0);
+            item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
         });
         
@@ -381,7 +412,6 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "리스트.xlsx");
 }
 
-// [핵심] A4 용지 규격 (210x297mm) PDF 일괄 생성 로직 (ID 잘림 해결)
 async function generateAllQRs() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -413,7 +443,6 @@ async function generateAllQRs() {
         const posY = startY + (row * cellH);
 
         qrDiv.innerHTML = "";
-        // QR 코드 생성 (크기 축소: 25x25mm)
         const qr = new QRCode(qrDiv, { text: id, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.H });
         
         await new Promise(r => setTimeout(r, 40));
@@ -422,10 +451,8 @@ async function generateAllQRs() {
         if (canvas) {
             const imgData = canvas.toDataURL("image/png");
             doc.setFontSize(6);
-            // 텍스트 위치 상단으로 조정 및 baseline 설정
             doc.text(id, posX + (cellW / 2), posY + 3, { align: "center", baseline: "top" });
-            // QR 코드 이미지 위치 하단으로 조정 및 크기 설정 (25x25mm)
-            doc.addImage(imgData, 'PNG', posX + 2.5, posY + 4, 25, 25);
+            doc.addImage(imgData, 'PNG', posX + 2.5, posY + 4.5, 25, 25);
             doc.setDrawColor(200);
             doc.setLineDashPattern([1, 1], 0);
             doc.rect(posX, posY, cellW, cellH);
