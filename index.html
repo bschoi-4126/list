@@ -3,60 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카메라 무조건 띄우기</title>
-    <script id="lib-src" src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <title>카메라 긴급 점검</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <style>
-        body { text-align: center; padding: 20px; font-family: sans-serif; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #000; min-height: 300px; border: 3px solid #007bff; }
-        #status { padding: 10px; margin-bottom: 10px; font-weight: bold; background: #eee; border-radius: 5px; }
-        .btn { padding: 20px; width: 80%; font-size: 20px; background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer; margin-top: 20px; }
+        body { text-align: center; padding: 20px; font-family: sans-serif; background: #f4f4f4; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #000; min-height: 300px; border: 5px solid #007bff; border-radius: 10px; }
+        .btn { padding: 20px; width: 90%; font-size: 20px; font-weight: bold; margin-top: 20px; cursor: pointer; border-radius: 10px; border: none; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        #log { margin-top: 20px; padding: 10px; background: #eee; font-size: 12px; text-align: left; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <h2>📷 카메라 단독 점검</h2>
-    
-    <div id="status">⏳ 라이브러리 상태 확인 중...</div>
+    <h2>📦 카메라 긴급 복구 테스트</h2>
     
     <div id="reader"></div>
+
+    <button class="btn btn-blue" onclick="testQR()">1. QR 스캐너 실행 (도구 사용)</button>
     
-    <button class="btn" onclick="runCamera()">카메라 시작하기</button>
+    <button class="btn btn-green" onclick="testNative()">2. 생(Raw) 카메라 테스트</button>
+
+    <div id="log">로그 기록: 대기 중...</div>
 
     <script>
-        // 1. 라이브러리 로드 감시 (안 오면 서버 교체)
-        function checkLib() {
-            const status = document.getElementById('status');
-            if (typeof Html5QrCode !== "undefined") {
-                status.innerText = "✅ 준비 완료! 버튼을 누르세요.";
-                status.style.color = "green";
-            } else {
-                status.innerText = "⏳ 도구가 안 와서 서버를 바꾸는 중...";
-                // 서버 2 (jsDelivr)로 강제 교체
-                const newScript = document.createElement('script');
-                newScript.src = "https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js";
-                document.head.appendChild(newScript);
-                
-                // 다시 확인
-                setTimeout(checkLib, 1000);
-            }
+        function addLog(msg) {
+            const log = document.getElementById('log');
+            log.innerHTML += "<br>> " + msg;
         }
-        
-        window.onload = checkLib;
 
-        // 2. 카메라 강제 실행
-        function runCamera() {
+        // 방법 1: 라이브러리를 이용한 QR 스캔 테스트
+        function testQR() {
+            addLog("QR 스캐너 시도 중...");
             if (typeof Html5QrCode === "undefined") {
-                alert("아직 도구가 안 왔습니다. 잠시만 더 기다려보세요.");
+                addLog("❌ 실패: 여전히 도구가 로드되지 않았습니다.");
+                alert("라이브러리 로드 실패! 와이파이를 끄고 LTE로 시도하거나 브라우저를 바꿔보세요.");
                 return;
             }
 
             const scanner = new Html5QrCode("reader");
-            scanner.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: 250 },
-                (text) => { alert("스캔 성공: " + text); }
-            ).catch(err => {
-                alert("카메라 권한을 '허용'했는지 확인하세요!\n에러내용: " + err);
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+                alert("성공! 결과: " + text);
+            }).then(() => {
+                addLog("✅ QR 스캐너 정상 작동 중!");
+            }).catch(err => {
+                addLog("❌ 스캐너 에러: " + err);
+            });
+        }
+
+        // 방법 2: 라이브러리 없이 폰 자체 카메라만 띄우기 (이게 되면 100% 라이브러리 서버 문제입니다)
+        function testNative() {
+            addLog("생 카메라(Native) 시도 중...");
+            const constraints = { video: { facingMode: "environment" } };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
+            .then((stream) => {
+                const reader = document.getElementById('reader');
+                reader.innerHTML = '<video id="v" autoplay playsinline style="width:100%"></video>';
+                document.getElementById('v').srcObject = stream;
+                addLog("✅ 생 카메라 작동 성공! (폰 하드웨어는 정상입니다)");
+            })
+            .catch((err) => {
+                addLog("❌ 생 카메라 에러: " + err);
+                alert("카메라 권한 자체가 차단되어 있습니다. 설정에서 브라우저 카메라 권한을 확인하세요.");
             });
         }
     </script>
