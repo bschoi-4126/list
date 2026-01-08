@@ -3,70 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카메라 엔진 최종 테스트</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    
+    <title>카메라 무조건 띄우기</title>
+    <script id="lib-src" src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
-        #status { padding: 15px; margin-bottom: 20px; font-weight: bold; border-radius: 8px; border: 2px solid #ccc; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #000; min-height: 300px; border-radius: 10px; overflow: hidden; }
-        .btn { padding: 15px 30px; font-size: 18px; margin-top: 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 8px; }
-        #result { margin-top: 20px; font-size: 20px; color: blue; font-weight: bold; }
+        body { text-align: center; padding: 20px; font-family: sans-serif; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #000; min-height: 300px; border: 3px solid #007bff; }
+        #status { padding: 10px; margin-bottom: 10px; font-weight: bold; background: #eee; border-radius: 5px; }
+        .btn { padding: 20px; width: 80%; font-size: 20px; background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <h2>📷 카메라 단독 점검</h2>
-
-    <div id="status">도구 로딩 확인 중...</div>
-
+    
+    <div id="status">⏳ 라이브러리 상태 확인 중...</div>
+    
     <div id="reader"></div>
-
-    <div id="result">QR 스캔 결과 대기 중...</div>
-
-    <button class="btn" onclick="startTest()">카메라 시작하기</button>
+    
+    <button class="btn" onclick="runCamera()">카메라 시작하기</button>
 
     <script>
-        // 페이지 로드 시 라이브러리가 왔는지 즉시 확인
-        window.onload = function() {
-            const statusDiv = document.getElementById('status');
+        // 1. 라이브러리 로드 감시 (안 오면 서버 교체)
+        function checkLib() {
+            const status = document.getElementById('status');
             if (typeof Html5QrCode !== "undefined") {
-                statusDiv.innerText = "✅ 엔진 로드 완료! 버튼을 누르세요.";
-                statusDiv.style.background = "#d4edda";
+                status.innerText = "✅ 준비 완료! 버튼을 누르세요.";
+                status.style.color = "green";
             } else {
-                statusDiv.innerText = "❌ 엔진 로드 실패! 다른 서버에서 재시도 중...";
-                statusDiv.style.background = "#f8d7da";
+                status.innerText = "⏳ 도구가 안 와서 서버를 바꾸는 중...";
+                // 서버 2 (jsDelivr)로 강제 교체
+                const newScript = document.createElement('script');
+                newScript.src = "https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js";
+                document.head.appendChild(newScript);
                 
-                // 실패 시 보조 서버에서 다시 불러오기
-                const backupScript = document.createElement('script');
-                backupScript.src = "https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js";
-                backupScript.onload = () => {
-                    statusDiv.innerText = "✅ 백업 엔진으로 로드 완료!";
-                    statusDiv.style.background = "#fff3cd";
-                };
-                document.head.appendChild(backupScript);
+                // 다시 확인
+                setTimeout(checkLib, 1000);
             }
-        };
+        }
+        
+        window.onload = checkLib;
 
-        function startTest() {
+        // 2. 카메라 강제 실행
+        function runCamera() {
             if (typeof Html5QrCode === "undefined") {
-                alert("아직 스캐너 도구가 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
+                alert("아직 도구가 안 왔습니다. 잠시만 더 기다려보세요.");
                 return;
             }
 
-            const html5QrCode = new Html5QrCode("reader");
-            
-            // 폰에서 가장 확실한 '후면 카메라' 강제 모드
-            html5QrCode.start(
+            const scanner = new Html5QrCode("reader");
+            scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: 250 },
-                (decodedText) => {
-                    document.getElementById('result').innerText = "✅ 스캔 성공: " + decodedText;
-                }
+                (text) => { alert("스캔 성공: " + text); }
             ).catch(err => {
-                alert("카메라 실행 실패: " + err);
-                document.getElementById('status').innerText = "❌ 카메라 권한 또는 환경 에러";
+                alert("카메라 권한을 '허용'했는지 확인하세요!\n에러내용: " + err);
             });
         }
     </script>
