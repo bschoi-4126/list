@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897871.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -73,7 +73,7 @@
             <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">엑셀 업로드</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
         </div>
-        <button class="btn btn-red" onclick="generateAllQRs()">QR 코드 일괄 생성 (ZIP)</button>
+        <button class="btn btn-red" onclick="generateAllQRs()">A4 용지 QR 일괄 생성 (PDF)</button>
         <div id="qr-status" style="font-size:11px; color:#666; margin-top:5px;"></div>
         
         <div style="margin-top:15px; padding-top:15px; border-top:1px solid #ddd;">
@@ -91,7 +91,7 @@
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
-        <input type="text" id="search-input" placeholder="위치ID 또는 규격 검색..." onkeyup="filterTable()">
+        <input type="text" id="search-input" placeholder="위치ID 또는 품목명/규격 검색..." onkeyup="filterTable()">
     </div>
 
     <div id="data-list"></div>
@@ -112,7 +112,8 @@ let currentPage = 1;
 let isScanning = false;
 const itemsPerPage = 50; 
 const REPO = 'bschoi-4126/list';
-const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '규격', '단가', '현재재고', '재고금액'];
+// 품목명 추가된 헤더 정의
+const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '단가', '현재재고', '재고금액'];
 
 window.onload = function() {
     loadFromServer();
@@ -132,7 +133,6 @@ function loadFromServer() {
         const workbook = XLSX.read(data, {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
-        // [ID 자동 구성 로직 수정] 하이픈(-) 포함 형식: 층-구역-랙-단
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
@@ -214,6 +214,7 @@ function renderTable(filter = "") {
     const listDiv = document.getElementById('data-list');
     const filtered = inventoryData.filter(item => 
         String(item['위치ID'] || '').toLowerCase().includes(filter.toLowerCase()) || 
+        String(item['품목명'] || '').toLowerCase().includes(filter.toLowerCase()) || 
         String(item['규격'] || '').toLowerCase().includes(filter.toLowerCase())
     );
 
@@ -230,10 +231,11 @@ function renderTable(filter = "") {
         <div class="item-card">
             <div class="stock-display">${stock.toLocaleString()}개</div>
             <div style="font-size:12px; color:#888;">ID: ${row['위치ID'] || '-'}</div>
-            <div style="font-size:18px; margin: 5px 0; width: 75%;"><strong>${row['규격'] || '-'}</strong></div>
+            <div style="font-size:18px; margin: 5px 0; width: 75%;"><strong>${row['품목명'] || ''}</strong></div>
+            <div style="font-size:14px; color:#666; margin-bottom:10px;">${row['규격'] || '-'}</div>
             
             <div class="item-info-grid">
-                <div><span class="info-label">위치:</span>${row['층'] || ''}층 ${row['구역'] || ''}구역</div>
+                <div><span class="info-label">위치:</span>${row['층'] || ''}F ${row['구역'] || ''}구역</div>
                 <div><span class="info-label">코드:</span>${row['품목코드'] || '-'}</div>
                 <div><span class="info-label">랙/단:</span>${row['랙'] || ''}-${row['단'] || ''}</div>
                 <div><span class="info-label">단가:</span>${price.toLocaleString()}원</div>
@@ -351,7 +353,6 @@ function handleFileUpload(event) {
         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
-        // [ID 자동 구성 로직 수정] 하이픈(-) 포함 형식
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
@@ -373,25 +374,69 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "리스트.xlsx");
 }
 
+// [핵심] A4 용지 규격 (210x297mm) PDF 일괄 생성 로직
 async function generateAllQRs() {
-    const zip = new JSZip();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
     const qrDiv = document.getElementById('qrcode-hidden');
     const status = document.getElementById('qr-status');
+    
+    const cellW = 30; // 가로 칸 사이즈 (30mm)
+    const cellH = 30; // 세로 칸 사이즈 (30mm)
+    const cols = 7;   // 가로 7개
+    const rows = 9;   // 세로 9개
+    const itemsPerPagePDF = cols * rows; // 페이지당 63개
+    
+    // 여백 계산 (가로 210mm, 세로 297mm 기준)
+    const startX = (210 - (cellW * cols)) / 2;
+    const startY = (297 - (cellH * rows)) / 2;
+
     for (let i = 0; i < inventoryData.length; i++) {
         let id = String(inventoryData[i]['위치ID']);
         if(!id || id.length < 1) continue;
+
+        // 새 페이지 추가 (첫 데이터 제외, 63개마다)
+        if (i > 0 && i % itemsPerPagePDF === 0) {
+            doc.addPage();
+        }
+
+        // 현재 페이지에서의 위치 계산
+        const idxInPage = i % itemsPerPagePDF;
+        const col = idxInPage % cols;
+        const row = Math.floor(idxInPage / cols);
+        
+        const posX = startX + (col * cellW);
+        const posY = startY + (row * cellH);
+
+        // QR 생성 (임시 div)
         qrDiv.innerHTML = "";
-        new QRCode(qrDiv, { text: id, width: 200, height: 200 });
-        await new Promise(r => setTimeout(r, 50));
-        const img = qrDiv.querySelector('img');
-        if(img) zip.file(`QR_${id}.png`, img.src.split(',')[1], {base64: true});
-        status.innerText = `QR 생성 중... (${i+1}/${inventoryData.length})`;
+        const qr = new QRCode(qrDiv, { text: id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+        
+        // QR 이미지가 생성될 때까지 아주 짧은 대기
+        await new Promise(r => setTimeout(r, 40));
+        
+        const canvas = qrDiv.querySelector('canvas');
+        if (canvas) {
+            const imgData = canvas.toDataURL("image/png");
+            
+            // 1. 위치 ID 텍스트 (조그맣게 상단 중앙)
+            doc.setFontSize(6);
+            doc.text(id, posX + (cellW / 2), posY + 4, { align: "center" });
+            
+            // 2. QR 코드 (28x28mm 정도로 아래 배치)
+            doc.addImage(imgData, 'PNG', posX + 1, posY + 5, 28, 28);
+            
+            // 3. 외곽선 (커팅 가이드용 점선)
+            doc.setDrawColor(200);
+            doc.setLineDashPattern([1, 1], 0);
+            doc.rect(posX, posY, cellW, cellH);
+        }
+        
+        status.innerText = `PDF 생성 중... (${i+1}/${inventoryData.length})`;
     }
-    zip.generateAsync({type:"blob"}).then(blob => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "QR_Codes.zip"; a.click();
-        status.innerText = "✅ 다운로드 완료!";
-    });
+
+    doc.save("재고관리_QR코드_인쇄물.pdf");
+    status.innerText = "✅ PDF 다운로드 완료!";
 }
 </script>
 </body>
