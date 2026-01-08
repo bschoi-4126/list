@@ -21,6 +21,7 @@
         :root { --main-color: #007bff; --admin-color: #dc3545; --success-color: #28a745; --update-color: #6f42c1; }
         body { font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; background: #f4f6f9; color: #333; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         
+        /* 헤더 구성 */
         .header { background: var(--main-color); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding-top: env(safe-area-inset-top); }
         .admin-mode .header { background: var(--admin-color); }
         .back-btn { font-size: 22px; cursor: pointer; padding: 5px 12px; }
@@ -29,6 +30,7 @@
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: center; }
         .status-bar { font-size: 13px; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; transition: 0.3s; }
 
+        /* 카메라 뷰파인더 */
         #camera-wrapper { width: 100%; position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 1/1; border: 3px solid var(--main-color); }
         video { width: 100%; height: 100%; object-fit: cover; }
         
@@ -36,30 +38,35 @@
         .btn-blue { background: var(--main-color); color: white; }
         .btn-red { background: var(--admin-color); color: white; }
         .btn-green { background: var(--success-color); color: white; }
+        .btn-purple { background: var(--update-color); color: white; }
         
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 100px; font-family: monospace; font-size: 12px; }
 
+        /* 관리자 모드 UI */
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; text-align: left; }
         .admin-mode .admin-ui { display: block; }
 
-        /* 아이템 카드 디자인 밸런스 조정 */
-        .item-card { border-left: 8px solid var(--main-color); padding: 15px; background: #fff; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: left; position: relative; }
+        /* 아이템 카드 디자인 밸런스 */
+        .item-card { border-left: 8px solid var(--main-color); padding: 18px; background: #fff; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: left; position: relative; }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
         
-        .item-id { font-size: 14px; color: #888; margin-bottom: 4px; font-weight: 500; }
-        .item-title { font-size: 18px; font-weight: bold; color: #222; margin-bottom: 4px; width: 80%; }
-        .item-spec { font-size: 16px; color: #555; margin-bottom: 10px; }
+        .item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .item-id { font-size: 14px; color: var(--main-color); font-weight: bold; background: #e7f1ff; padding: 2px 8px; border-radius: 4px; }
+        .stock-display { font-size: 26px; font-weight: 900; color: var(--main-color); }
         
-        .stock-display { font-size: 24px; font-weight: bold; color: var(--main-color); position: absolute; top: 15px; right: 15px; }
+        .item-title { font-size: 20px; font-weight: 800; color: #111; margin-bottom: 4px; line-height: 1.3; }
+        .item-spec { font-size: 16px; color: #555; margin-bottom: 12px; font-weight: 500; }
 
-        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 14px; color: #444; border-top: 1px solid #eee; padding-top: 10px; }
+        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #444; border-top: 1px solid #eee; padding-top: 12px; }
         .info-label { font-weight: bold; color: #777; margin-right: 5px; }
 
-        /* 재고수정 입력칸 및 적용 버튼 */
-        .edit-box { margin-top: 15px; display: flex; gap: 8px; align-items: center; background: #fff0f0; padding: 10px; border-radius: 8px; }
-        .edit-input { width: 80px !important; padding: 8px !important; margin: 0 !important; font-size: 14px !important; text-align: center; }
-        .apply-btn { width: auto !important; margin: 0 !important; padding: 8px 15px !important; font-size: 14px !important; background: var(--success-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        /* 재고 수정 섹션 */
+        .edit-box { margin-top: 15px; display: flex; gap: 8px; align-items: center; background: #fdf2f2; padding: 10px; border-radius: 8px; border: 1px solid #ffe3e3; }
+        .edit-input { width: 80px !important; padding: 8px !important; margin: 0 !important; font-size: 15px !important; text-align: center; border: 1px solid #ccc !important; }
+        .apply-btn { width: auto !important; margin: 0 !important; padding: 8px 16px !important; font-size: 14px !important; background: var(--success-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
+        /* 페이지네이션 */
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
         .page-btn { padding: 10px 18px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .page-btn:disabled { background: #eee; color: #999; }
@@ -74,7 +81,7 @@
 </div>
 
 <div class="container">
-    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 데이터 동기화 중...</div>
+    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 데이터 동기화 대기 중...</div>
 
     <div class="admin-ui">
         <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 패널</h4>
@@ -88,8 +95,9 @@
         <div id="qr-status" style="font-size:11px; color:#666; margin-top:5px;"></div>
         
         <div style="margin-top:15px; padding-top:15px; border-top:1px solid #ddd;">
-            <textarea id="index-code" placeholder="새 index.html 코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" style="background: var(--update-color); color: white;" onclick="pushIndexToGithub()">🚀 소스코드 서버 업데이트</button>
+            <p style="font-size:12px; font-weight:bold; color:var(--update-color);">소스 업데이트 (index.html)</p>
+            <textarea id="index-code" placeholder="새 코드를 붙여넣으세요."></textarea>
+            <button class="btn btn-purple" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
         </div>
     </div>
 
@@ -102,7 +110,7 @@
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
-        <input type="text" id="search-input" placeholder="ID 또는 품목명/규격 검색..." onkeyup="filterTable()">
+        <input type="text" id="search-input" placeholder="위치ID 또는 품목명/규격 검색..." onkeyup="filterTable()">
     </div>
 
     <div id="data-list"></div>
@@ -119,11 +127,12 @@
 let inventoryData = [];
 let isAdmin = false;
 let videoStream = null;
-let currentPage = 1;
 let isScanning = false;
-const itemsPerPage = 50; 
+let isSaving = false; // Call Stack Error 방지용 락
+let currentPage = 1;
+const itemsPerPage = 50; // 50개 페이징
 const REPO = 'bschoi-4126/list';
-// 품목명 추가 및 명칭(품목코드, 표준단가) 변경
+// 명칭 통일: 품목명 추가, 표준단가/품목코드 사용
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '표준단가', '현재재고', '재고금액'];
 
 window.onload = function() {
@@ -145,6 +154,7 @@ function loadFromServer() {
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
         inventoryData = rawData.map(item => {
+            // 위치ID 자동 생성 로직 (하이픈 포함)
             if (!item['위치ID']) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
                 item['위치ID'] = parts.join('-');
@@ -157,7 +167,7 @@ function loadFromServer() {
         updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
         renderTable();
     }).catch(() => {
-        updateStatus("⚠️ 데이터 로드 실패 (파일 업로드 필요)", "#fff3cd");
+        updateStatus("⚠️ 데이터 로드 실패 (파일 수동 업로드 필요)", "#fff3cd");
     });
 }
 
@@ -177,10 +187,10 @@ async function toggleCamera() {
         videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = videoStream;
         btn.innerText = "📷 카메라 끄기";
-        fb.innerText = "🔍 QR 코드를 인식하는 중...";
+        fb.innerText = "🔍 QR 코드를 찾는 중...";
         startNativeScanner();
     } catch (err) {
-        alert("카메라 권한을 확인하세요: " + err);
+        alert("카메라 권한 오류: " + err);
     }
 }
 
@@ -196,7 +206,7 @@ async function startNativeScanner() {
     if (isScanning) return;
     isScanning = true;
     if (!('BarcodeDetector' in window)) {
-        document.getElementById('scan-feedback').innerText = "⚠️ 크롬 브라우저를 사용하세요.";
+        document.getElementById('scan-feedback').innerText = "⚠️ 내장 스캐너 미지원. Chrome을 사용하세요.";
         return;
     }
     const detector = new BarcodeDetector({ formats: ['qr_code'] });
@@ -212,7 +222,7 @@ async function startNativeScanner() {
                 filterTable();
                 document.getElementById('scan-feedback').innerText = "✅ 인식 완료: " + text;
                 window.scrollTo({ top: document.getElementById('search-input').offsetTop - 100, behavior: 'smooth' });
-                setTimeout(scan, 2000); 
+                setTimeout(scan, 3000); 
             } else {
                 requestAnimationFrame(scan);
             }
@@ -242,11 +252,13 @@ function renderTable(filter = "") {
         const price = parseInt(row['표준단가']) || 0;
         const total = (stock * price).toLocaleString();
         
-        // ID, 품목명, 규격 밸런스 조정 디자인
+        // 디자인 밸런스 조정 아이템 카드
         html += `
         <div class="item-card">
-            <div class="stock-display">${stock.toLocaleString()}개</div>
-            <div class="item-id">ID: ${row['위치ID'] || '-'}</div>
+            <div class="item-top">
+                <span class="item-id">ID: ${row['위치ID'] || '-'}</span>
+                <span class="stock-display">${stock.toLocaleString()}개</span>
+            </div>
             <div class="item-title">${row['품목명'] || '품목명 없음'}</div>
             <div class="item-spec">${row['규격'] || '-'}</div>
             
@@ -259,7 +271,7 @@ function renderTable(filter = "") {
 
             ${isAdmin ? `
             <div class="edit-box">
-                <span class="edit-label">수량수정:</span>
+                <span class="edit-label">수량:</span>
                 <input type="number" id="input-${row['위치ID']}" value="${stock}" class="edit-input">
                 <button class="apply-btn" onclick="applyItemUpdate('${row['위치ID']}')">적용</button>
             </div>` : ''}
@@ -300,8 +312,9 @@ function customBack() {
     }
 }
 
-// 개별 수정 후 즉시 깃허브 저장 로직
+// 개별 수정 및 즉시 저장 로직
 async function applyItemUpdate(locId) {
+    if (isSaving) return;
     const inputEl = document.getElementById(`input-${locId}`);
     const newVal = parseInt(inputEl.value) || 0;
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
@@ -329,49 +342,38 @@ function toggleAdmin() {
     }
 }
 
+// Call Stack Error 해결을 위한 최종 push 로직
 async function pushToGithub(isAuto = false) {
+    if (isSaving) return; 
+    isSaving = true;
+
     const token = document.getElementById('gh-token').value;
-    if(!token) return isAuto ? null : alert("토큰을 입력하세요.");
+    if(!token) { isSaving = false; return isAuto ? null : alert("토큰을 입력하세요."); }
     localStorage.setItem('gh_token', token);
     
-    const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(wbout)));
-    
-    const apiURL = `https://api.github.com/repos/${REPO}/contents/리스트.xlsx`;
     try {
+        const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Data");
+        const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+        const base64Content = btoa(String.fromCharCode(...new Uint8Array(wbout)));
+        
+        const apiURL = `https://api.github.com/repos/${REPO}/contents/리스트.xlsx`;
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = getRes.ok ? (await getRes.json()).sha : "";
+        
         const putRes = await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Update item", content: base64Content, sha: sha })
+            body: JSON.stringify({ message: "Stock update", content: base64Content, sha: sha })
         });
+        
         if(putRes.ok) {
             updateStatus("✅ 서버 저장 완료", "#d4edda");
-            if(!isAuto) alert("✅ 저장 성공!");
+            if(!isAuto) alert("✅ 서버 저장 성공!");
         }
     } catch (e) { alert("저장 실패: " + e.message); }
-}
-
-async function pushIndexToGithub() {
-    const token = document.getElementById('gh-token').value;
-    const content = document.getElementById('index-code').value;
-    if(!token || !content) return alert("토큰과 소스 코드를 입력하세요.");
-    const base64Content = btoa(unescape(encodeURIComponent(content)));
-    const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
-    try {
-        const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
-        let sha = getRes.ok ? (await getRes.json()).sha : "";
-        await fetch(apiURL, {
-            method: "PUT",
-            headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Update app code", content: base64Content, sha: sha })
-        });
-        alert("✅ 업데이트 성공!");
-    } catch (e) { alert("실패: " + e.message); }
+    finally { isSaving = false; }
 }
 
 async function handleFileUpload(event) {
@@ -383,8 +385,8 @@ async function handleFileUpload(event) {
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
-                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
-                item['위치ID'] = parts.join('-');
+                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p).join('-');
+                item['위치ID'] = parts;
             }
             item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
@@ -403,21 +405,41 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "리스트.xlsx");
 }
 
-// A4 QR PDF 출력 최적화 (ID 안잘리게)
+async function pushIndexToGithub() {
+    const token = document.getElementById('gh-token').value;
+    const content = document.getElementById('index-code').value;
+    if(!token || !content) return alert("토큰과 소스 코드를 입력하세요.");
+    
+    const base64Content = btoa(unescape(encodeURIComponent(content)));
+    const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
+    try {
+        const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
+        let sha = getRes.ok ? (await getRes.json()).sha : "";
+        await fetch(apiURL, {
+            method: "PUT",
+            headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Update app code", content: base64Content, sha: sha })
+        });
+        alert("✅ 소스코드 업데이트 성공!");
+    } catch (e) { alert("업데이트 실패: " + e.message); }
+}
+
+// A4 인쇄용 PDF 생성 로직 (7x9 배열)
 async function generateAllQRs() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const qrDiv = document.getElementById('qrcode-hidden');
     const status = document.getElementById('qr-status');
     const cellW = 30; const cellH = 30; const cols = 7; const rows = 9;   
-    const itemsPerPagePDF = cols * rows; 
+    const itemsPerPagePDF = 63; 
     const startX = (210 - (cellW * cols)) / 2;
     const startY = (297 - (cellH * rows)) / 2;
 
     for (let i = 0; i < inventoryData.length; i++) {
         let id = String(inventoryData[i]['위치ID']);
-        if(!id || id.length < 1) continue;
+        if(!id) continue;
         if (i > 0 && i % itemsPerPagePDF === 0) doc.addPage();
+
         const idxInPage = i % itemsPerPagePDF;
         const col = idxInPage % cols;
         const row = Math.floor(idxInPage / cols);
@@ -426,20 +448,20 @@ async function generateAllQRs() {
 
         qrDiv.innerHTML = "";
         new QRCode(qrDiv, { text: id, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.H });
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 45));
+        
         const canvas = qrDiv.querySelector('canvas');
         if (canvas) {
             const imgData = canvas.toDataURL("image/png");
             doc.setFontSize(6);
-            doc.text(id, posX + (cellW / 2), posY + 3, { align: "center", baseline: "top" });
+            doc.text(id, posX + 15, posY + 3, { align: "center", baseline: "top" });
             doc.addImage(imgData, 'PNG', posX + 2.5, posY + 4.5, 25, 25);
-            doc.setDrawColor(200);
-            doc.setLineDashPattern([1, 1], 0);
+            doc.setDrawColor(200); doc.setLineDashPattern([1, 1], 0);
             doc.rect(posX, posY, cellW, cellH);
         }
         status.innerText = `PDF 생성 중... (${i+1}/${inventoryData.length})`;
     }
-    doc.save("QR코드_A4_인쇄물.pdf");
+    doc.save("QR코드_인쇄물_A4.pdf");
     status.innerText = "✅ PDF 다운로드 완료!";
 }
 </script>
