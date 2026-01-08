@@ -79,8 +79,7 @@
         </div>
 
         <div style="background:#fefefe; padding:10px; border-radius:8px; border:1px solid var(--app-update);">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">인덱스 서버 업데이트</p>
-            <textarea id="index-code" placeholder="새로운 index.html 코드를 붙여넣으세요."></textarea>
+            <textarea id="index-code" placeholder="여기에 새로운 index.html 코드를 붙여넣으세요."></textarea>
             <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
         </div>
     </div>
@@ -88,6 +87,7 @@
     <div class="card">
         <div id="reader"></div>
         <div id="scan-feedback">카메라 준비 중...</div>
+        <button id="camera-retry-btn" class="btn btn-gray" onclick="startScanner()" style="display:none; padding:8px; font-size:12px;">📷 카메라 재시도</button>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -117,7 +117,6 @@ window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
-    // 뒤로가기 제어 로직
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
@@ -137,21 +136,44 @@ function loadFromServer() {
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
         renderTable();
-        startScanner();
+        setTimeout(startScanner, 500); // DOM 안정을 위해 약간의 지연 후 실행
     }).catch(() => {
         if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
         startScanner();
     });
 }
 
-// 1번: 후면 카메라 고정 및 2번: 권한 요청 최소화 로직 적용
 function startScanner() {
-    if (html5QrCode) return; // 이미 실행 중이면 중복 실행 방지
-    
     const feedback = document.getElementById('scan-feedback');
+    const retryBtn = document.getElementById('camera-retry-btn');
+    
+    // 1. 보안 환경 체크
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        feedback.innerHTML = "<span style='color:red'>❌ 에러: HTTPS 연결이 아니거나 카메라가 지원되지 않습니다.</span>";
+        return;
+    }
+
+    // 2. 기존 스캐너 정리 및 재시작 (권한 요청 최소화)
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            initScanner();
+        }).catch(() => {
+            html5QrCode = null;
+            initScanner();
+        });
+    } else {
+        initScanner();
+    }
+}
+
+function initScanner() {
+    const feedback = document.getElementById('scan-feedback');
+    const retryBtn = document.getElementById('camera-retry-btn');
+    
     html5QrCode = new Html5QrCode("reader");
     
-    // [핵심] facingMode: "environment"로 후면 카메라 고정
+    // 1번: 후면 카메라 고정 (environment)
     html5QrCode.start(
         { facingMode: "environment" }, 
         { fps: 15, qrbox: 250 },
@@ -162,7 +184,9 @@ function startScanner() {
             setTimeout(() => { feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
         }
     ).catch(err => {
+        console.error("Camera Start Error:", err);
         feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
+        retryBtn.style.display = "block"; // 실패 시 재시도 버튼 표시
     });
 }
 
@@ -196,7 +220,7 @@ function renderTable(filter = "") {
             </div>` : ''}
         </div>`;
     });
-    listDiv.innerHTML = html || "<p style='text-align:center; padding:30px; color:#999;'>데이터가 없습니다.</p>";
+    listDiv.innerHTML = html || "<p style='text-align:center; padding:30px; color:#999;'>결과가 없습니다.</p>";
     renderPagination(totalPages, filter);
 }
 
