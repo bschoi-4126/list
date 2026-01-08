@@ -13,9 +13,9 @@
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22재고관리시스템%22,%22short_name%22:%22재고관리%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f4f6f9%22,%22theme_color%22:%22#007bff%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/2897/2897871.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897871.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.1/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -42,7 +42,7 @@
         .btn-gray { background: #6c757d; color: white; }
 
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 150px; font-family: monospace; font-size: 12px; }
+        textarea { height: 120px; font-family: monospace; font-size: 12px; }
 
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; }
         .admin-mode .admin-ui { display: block; }
@@ -50,7 +50,7 @@
         .item-card { border-left: 6px solid var(--main-color); padding: 15px; background: #fff; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
 
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 30px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 40px; }
         .page-btn { padding: 10px 15px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .page-btn:disabled { background: #eee; color: #999; }
     </style>
@@ -64,31 +64,29 @@
 </div>
 
 <div class="container">
-    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 시스템 로딩 중...</div>
+    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 동기화 중...</div>
 
     <div class="admin-ui">
-        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 통합 설정</h4>
-        <input type="password" id="gh-token" placeholder="GitHub 토큰(ghp_...)">
+        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 설정</h4>
+        <input type="password" id="gh-token" placeholder="GitHub 토큰">
         
         <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #ddd;">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold;">1. 데이터 및 양식 관리</p>
-            <button class="btn btn-gray" style="margin:0;" onclick="downloadTemplate()">기본 양식 받기</button>
-            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">새 엑셀 파일 불러오기</button>
+            <button class="btn btn-gray" onclick="downloadTemplate()">기본 양식 받기</button>
+            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">엑셀 불러오기</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
-            <button class="btn btn-red" onclick="generateAllQRs()">QR 코드 일괄 생성(ZIP)</button>
+            <button class="btn btn-red" onclick="generateAllQRs()">QR 일괄 생성</button>
             <div id="qr-status" style="font-size:10px; margin-top:5px; color:#666;"></div>
         </div>
 
         <div style="background:#fefefe; padding:10px; border-radius:8px; border:1px solid var(--app-update);">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">2. 프로그램(INDEX) 업데이트</p>
-            <textarea id="index-code" placeholder="새로운 index.html 코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
+            <textarea id="index-code" placeholder="index.html 코드를 붙여넣으세요."></textarea>
+            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스 업데이트</button>
         </div>
     </div>
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">카메라 로딩 중...</div>
+        <div id="scan-feedback">카메라 연결을 기다리는 중...</div>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -99,7 +97,7 @@
     <div id="pagination-control" class="pagination"></div>
 
     <div class="admin-ui" style="position: sticky; bottom: 20px; z-index: 1000;">
-        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경된 재고 데이터 서버 저장</button>
+        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경 데이터 서버 저장</button>
     </div>
 </div>
 
@@ -118,7 +116,6 @@ window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
-    // 뒤로가기 제어
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
@@ -128,7 +125,7 @@ window.onload = function() {
 
 function updateStatus(msg, bg) {
     const el = document.getElementById('status-msg');
-    if(el) { el.innerText = msg; el.style.background = bg; }
+    el.innerText = msg; el.style.background = bg;
 }
 
 function loadFromServer() {
@@ -136,49 +133,41 @@ function loadFromServer() {
     fetch(url).then(res => res.arrayBuffer()).then(data => {
         const workbook = XLSX.read(data, {type: 'array'});
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
+        updateStatus("✅ 서버 데이터 로드 완료", "#d4edda");
         renderTable();
-        // 라이브러리 체크 후 카메라 실행
-        waitForLibrary();
+        initCamera(); // 라이브러리 로드 확인 후 카메라 시작
     }).catch(() => {
-        if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
-        waitForLibrary();
+        updateStatus("⚠️ 서버 연결 실패 (수동 업로드 가능)", "#fff3cd");
+        initCamera();
     });
 }
 
-function waitForLibrary() {
-    const feedback = document.getElementById('scan-feedback');
-    // Html5QrCode 라이브러리가 로드되었는지 체크
-    if (typeof Html5QrCode !== "undefined") {
-        startScanner();
-    } else {
-        feedback.innerText = "⏳ 카메라 모듈 로드 대기 중...";
-        setTimeout(waitForLibrary, 300); // 0.3초마다 재확인
-    }
+function initCamera() {
+    const checkLib = setInterval(() => {
+        if (typeof Html5QrCode !== "undefined") {
+            clearInterval(checkLib);
+            startScanner();
+        }
+    }, 200);
 }
 
 function startScanner() {
     if (html5QrCode) return;
     const feedback = document.getElementById('scan-feedback');
+    html5QrCode = new Html5QrCode("reader");
     
-    try {
-        html5QrCode = new Html5QrCode("reader");
-        // [1번 후면카메라 고정 및 2번 권한 최적화]
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            { fps: 15, qrbox: 250 },
-            (text) => {
-                document.getElementById('search-input').value = text;
-                filterTable();
-                feedback.innerText = "✅ 스캔 성공: " + text;
-                setTimeout(() => { if(feedback.innerText.includes("성공")) feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
-            }
-        ).catch(err => {
-            feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
-        });
-    } catch (e) {
-        feedback.innerHTML = `<span style='color:red'>❌ 스캐너 초기화 실패</span>`;
-    }
+    // 후면 카메라 고정 (facingMode: environment)
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        { fps: 15, qrbox: {width: 250, height: 250} },
+        (text) => {
+            document.getElementById('search-input').value = text;
+            filterTable();
+            feedback.innerText = "✅ 스캔 성공: " + text;
+        }
+    ).catch(err => {
+        feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
+    });
 }
 
 function renderTable(filter = "") {
@@ -200,14 +189,14 @@ function renderTable(filter = "") {
         html += `
         <div class="item-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <small style="color:#888;">ID: ${row['위치ID'] || '-'}</small>
+                <small>ID: ${row['위치ID'] || '-'}</small>
                 <b style="color:var(--main-color); font-size:20px;">${stock.toLocaleString()}개</b>
             </div>
             <div style="margin:8px 0; font-size:16px;"><strong>${row['규격'] || '-'}</strong></div>
             <div style="font-size:12px; color:#666;">예상금액: ${(stock * price).toLocaleString()}원</div>
             ${isAdmin ? `
             <div style="margin-top:10px;">
-                <input type="number" value="${stock}" style="border:1px solid #ffcccc" onchange="updateVal('${row['위치ID']}', '현재재고', this.value)">
+                <input type="number" value="${stock}" onchange="updateVal('${row['위치ID']}', '현재재고', this.value)">
             </div>` : ''}
         </div>`;
     });
@@ -259,7 +248,7 @@ async function pushIndexToGithub() {
     const content = document.getElementById('index-code').value;
     if(!token || !content) return alert("토큰과 코드를 입력하세요.");
     const btn = document.getElementById('app-update-btn');
-    btn.disabled = true; btn.innerText = "업데이트 중...";
+    btn.disabled = true; btn.innerText = "처리 중...";
     try {
         const base64Content = btoa(unescape(encodeURIComponent(content)));
         const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
@@ -272,8 +261,8 @@ async function pushIndexToGithub() {
             body: JSON.stringify({ message: "앱 업데이트", content: base64Content, sha: sha })
         });
         if(putRes.ok) alert("✅ 앱 업데이트 성공!");
-    } catch (err) { alert("에러: " + err.message); }
-    finally { btn.disabled = false; btn.innerText = "🚀 앱 소스코드 서버 업데이트"; }
+    } catch (err) { alert(err.message); }
+    finally { btn.disabled = false; btn.innerText = "🚀 앱 소스 업데이트"; }
 }
 
 async function pushToGithub() {
@@ -296,17 +285,16 @@ async function pushToGithub() {
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "데이터 업데이트", content: base64Content, sha: sha })
         });
-        if(putRes.ok) alert("✅ 데이터 저장 성공!");
-    } catch (err) { alert("에러: " + err.message); }
-    finally { btn.disabled = false; btn.innerText = "💾 변경된 재고 데이터 서버 저장"; }
+        if(putRes.ok) alert("✅ 저장 성공!");
+    } catch (err) { alert(err.message); }
+    finally { btn.disabled = false; btn.innerText = "💾 변경 데이터 서버 저장"; }
 }
 
 function toggleAdmin() {
-    const pw = prompt("관리자 암호:");
-    if (pw === "4126") {
+    if (prompt("관리자 암호:") === "4126") {
         isAdmin = !isAdmin;
         document.body.classList.toggle('admin-mode', isAdmin);
-        document.getElementById('auth-status').innerText = isAdmin ? "🔓 관리자 모드" : "🔐 직원 모드";
+        document.getElementById('auth-status').innerText = isAdmin ? "🔓 관리자" : "🔐 직원";
         renderTable();
     }
 }
@@ -317,7 +305,7 @@ function handleFileUpload(event) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        updateStatus("📂 로컬 파일 로드 완료", "#d1ecf1");
+        updateStatus("📂 로컬 데이터 로드 완료", "#d1ecf1");
         renderTable();
     };
     reader.readAsArrayBuffer(event.target.files[0]);
@@ -347,7 +335,7 @@ async function generateAllQRs() {
     zip.generateAsync({type:"blob"}).then(blob => {
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = "QR_Codes.zip"; a.click();
-        status.innerText = "✅ 다운로드 완료";
+        status.innerText = "✅ 완료";
     });
 }
 </script>
