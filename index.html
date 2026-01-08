@@ -13,10 +13,10 @@
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22재고관리시스템%22,%22short_name%22:%22재고관리%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f4f6f9%22,%22theme_color%22:%22#007bff%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/2897/2897871.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897871.png">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.1/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -86,7 +86,7 @@
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">카메라 라이브러리 로딩 중...</div>
+        <div id="scan-feedback">시스템 초기화 중...</div>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -144,16 +144,22 @@ function loadFromServer() {
 
 function checkLibraryAndStart() {
     const feedback = document.getElementById('scan-feedback');
-    // 라이브러리가 로드될 때까지 최대 5초간 확인
     let attempts = 0;
     const interval = setInterval(() => {
         attempts++;
-        if (typeof Html5QrCode !== 'undefined') {
+        // 필요한 라이브러리들이 모두 로드되었는지 체크
+        const libsLoaded = typeof Html5QrCode !== 'undefined' && typeof XLSX !== 'undefined' && typeof JSZip !== 'undefined';
+        
+        if (libsLoaded) {
             clearInterval(interval);
             startScanner();
-        } else if (attempts > 50) {
+        } else if (attempts > 50) { // 5초 경과
             clearInterval(interval);
-            feedback.innerHTML = "<span style='color:red'>❌ 라이브러리 로드 실패. 인터넷 연결을 확인하세요.</span>";
+            let missing = [];
+            if(typeof Html5QrCode === 'undefined') missing.push('Scanner');
+            if(typeof XLSX === 'undefined') missing.push('Excel');
+            if(typeof JSZip === 'undefined') missing.push('Zip');
+            feedback.innerHTML = `<span style='color:red'>❌ 로드 실패: ${missing.join(', ')} 모듈을 불러올 수 없습니다. 인터넷 상태를 확인하세요.</span>`;
         }
     }, 100);
 }
@@ -171,13 +177,13 @@ function startScanner() {
                 document.getElementById('search-input').value = text;
                 filterTable();
                 feedback.innerText = "✅ 스캔 성공: " + text;
-                setTimeout(() => { feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
+                setTimeout(() => { if(feedback.innerText.includes("스캔 성공")) feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
             }
         ).catch(err => {
             feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
         });
     } catch (e) {
-        feedback.innerHTML = `<span style='color:red'>❌ 초기화 오류: ${e.message}</span>`;
+        feedback.innerHTML = `<span style='color:red'>❌ 스캐너 초기화 오류</span>`;
     }
 }
 
