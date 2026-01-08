@@ -75,7 +75,7 @@
     <div class="card">
         <div id="reader"></div>
         <div id="scan-feedback">카메라 준비 중...</div>
-        <button class="btn btn-gray" onclick="startScanner()" style="padding: 8px; font-size: 12px;">카메라 재시작</button>
+        <button class="btn btn-gray" onclick="startScanner()" style="padding: 8px; font-size: 12px; background: #eee; color: #333;">📷 카메라 다시 켜기</button>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -129,24 +129,21 @@ function loadFromServer() {
         if (inventoryData.length === 0) {
             updateStatus("⚠️ 서버 데이터 로드 실패. 파일을 수동 업로드하세요.", "#fff3cd");
         }
-        startScanner(); // 데이터 로드 실패해도 카메라는 시도
+        startScanner();
     });
 }
 
-// [카메라 관련 핵심 수정]
 function startScanner() {
     const feedback = document.getElementById('scan-feedback');
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     
-    // HTTPS 확인
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        feedback.innerHTML = "<span style='color:red'>❌ 에러: 카메라는 HTTPS 보안 연결에서만 작동합니다.</span>";
+    if (location.protocol !== 'https:' && !isLocal) {
+        feedback.innerHTML = "<span style='color:red'>❌ 에러: 카메라는 HTTPS 연결에서만 작동합니다.<br>주소가 https:// 로 시작하는지 확인하세요.</span>";
         return;
     }
 
-    if(html5QrCode) {
-        html5QrCode.stop().then(() => {
-            initScanner();
-        }).catch(() => initScanner());
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => initScanner()).catch(() => initScanner());
     } else {
         initScanner();
     }
@@ -165,8 +162,7 @@ function initScanner() {
             feedback.innerText = "✅ 스캔 성공: " + text;
         }
     ).catch(err => {
-        console.error(err);
-        feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span><br><small>권한 허용을 확인해주세요.</small>`;
+        feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span><br><small>브라우저 설정에서 카메라 권한을 '허용'해주세요.</small>`;
     });
 }
 
