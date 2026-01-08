@@ -3,40 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>재고 관리 시스템</title>
+    <title>제민 재고관리 시스템</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="재고관리">
     <meta name="theme-color" content="#007bff">
-
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22재고관리시스템%22,%22short_name%22:%22재고관리%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f4f6f9%22,%22theme_color%22:%22#007bff%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/2897/2897871.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897871.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.1/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" onerror="this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root { --main-color: #007bff; --admin-color: #dc3545; --success-color: #28a745; --app-update: #6f42c1; }
         body { font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; background: #f4f6f9; color: #333; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
 
-        /* 뒤로가기 포함 헤더 */
+        /* 뒤로가기 버튼이 포함된 상단 헤더 */
         .header { background: var(--main-color); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding-top: env(safe-area-inset-top); }
         .admin-mode .header { background: var(--admin-color); }
-        .back-btn { font-size: 20px; cursor: pointer; padding: 5px 10px; }
+        .back-btn { font-size: 22px; cursor: pointer; padding: 5px 12px; }
 
         .container { padding: 15px; max-width: 800px; margin: 0 auto; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: center; }
         .status-bar { font-size: 13px; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 12px; font-weight: bold; }
 
-        /* 카메라 스캐너 전용 */
+        /* 카메라 스캐너 영역 */
         #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 1/1; border: 2px solid #ccc; }
         #scan-feedback { padding: 12px; margin-top: 8px; border-radius: 8px; font-weight: bold; background: #e9ecef; font-size: 14px; }
 
-        .btn { padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; transition: 0.2s; }
+        .btn { padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px; transition: 0.2s; }
+        .btn:disabled { background: #ccc !important; cursor: not-allowed; }
         .btn-blue { background: var(--main-color); color: white; }
         .btn-red { background: var(--admin-color); color: white; }
         .btn-green { background: var(--success-color); color: white; }
@@ -53,9 +53,8 @@
         .admin-mode .item-card { border-left-color: var(--admin-color); }
 
         /* 페이지네이션 */
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 30px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
         .page-btn { padding: 10px 15px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .page-btn:disabled { background: #eee; color: #999; }
     </style>
 </head>
 <body>
@@ -63,36 +62,32 @@
 <div class="header">
     <div class="back-btn" onclick="customBack()"><i class="fas fa-arrow-left"></i></div>
     <h2 style="margin:0; font-size: 18px;">📦 재고 통합 관리</h2>
-    <div id="auth-status" onclick="toggleAdmin()" style="font-size: 11px; cursor: pointer; text-decoration: underline;">🔐 직원 모드</div>
+    <div id="auth-status" onclick="toggleAdmin()" style="font-size: 11px; cursor: pointer; text-decoration: underline;">🔐 직원</div>
 </div>
 
 <div class="container">
-    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 로딩 중...</div>
+    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 확인 중...</div>
 
     <div class="admin-ui">
-        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 통합 설정</h4>
-        <input type="password" id="gh-token" placeholder="GitHub 토큰(ghp_...)">
-        
+        <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 설정</h4>
+        <input type="password" id="gh-token" placeholder="GitHub 토큰 입력">
         <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #ddd;">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold;">1. 데이터 및 양식 관리</p>
-            <button class="btn btn-gray" style="margin:0;" onclick="downloadTemplate()">기본 양식 받기</button>
-            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">새 엑셀 파일 불러오기</button>
+            <button class="btn btn-gray" onclick="downloadTemplate()">양식 받기</button>
+            <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">엑셀 불러오기</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
-            <button class="btn btn-red" onclick="generateAllQRs()">QR 코드 일괄 생성(ZIP)</button>
+            <button class="btn btn-red" onclick="generateAllQRs()">QR 일괄 생성(ZIP)</button>
             <div id="qr-status" style="font-size:10px; margin-top:5px; color:#666;"></div>
         </div>
-
         <div style="background:#fefefe; padding:10px; border-radius:8px; border:1px solid var(--app-update);">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">2. 프로그램(INDEX) 업데이트</p>
             <textarea id="index-code" placeholder="여기에 새로운 index.html 코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
+            <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 업데이트</button>
         </div>
     </div>
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">카메라를 시작하려면 아래 버튼을 누르세요.</div>
-        <button id="start-btn" class="btn btn-blue" style="margin-top: 10px;" onclick="startScanner()">📷 카메라 시작하기</button>
+        <div id="scan-feedback">카메라 기능을 불러오는 중...</div>
+        <button id="camera-btn" class="btn btn-blue" onclick="startScanner()" disabled>📷 카메라 시작하기</button>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -103,7 +98,7 @@
     <div id="pagination-control" class="pagination"></div>
 
     <div class="admin-ui" style="position: sticky; bottom: 20px; z-index: 1000;">
-        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경된 재고 데이터 서버 저장</button>
+        <button class="btn btn-green" id="sync-btn" onclick="pushToGithub()">💾 변경 데이터 서버 저장</button>
     </div>
 </div>
 
@@ -114,35 +109,44 @@ let inventoryData = [];
 let isAdmin = false;
 let html5QrCode;
 let currentPage = 1;
-const itemsPerPage = 50;
+const itemsPerPage = 50; // 페이지당 50개씩 출력
 const REPO = 'bschoi-4126/list';
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '규격', '단가', '현재재고', '재고금액'];
+
+// 3. 라이브러리 로드 확인 엔진
+function checkLib() {
+    const btn = document.getElementById('camera-btn');
+    const fb = document.getElementById('scan-feedback');
+    if (typeof Html5QrCode !== 'undefined') {
+        btn.disabled = false;
+        fb.innerText = "✅ 카메라 준비 완료! 버튼을 눌러주세요.";
+    } else {
+        setTimeout(checkLib, 500); // 로드될 때까지 0.5초마다 체크
+    }
+}
 
 window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
-    // 뒤로가기 방지 로직
+    // 뒤로가기 종료 방지 로직
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
         history.pushState(null, null, location.href);
     };
     
-    // 라이브러리 체크 엔진 시작
-    monitorLibrary();
+    checkLib(); // 라이브러리 체크 시작
 };
 
-function monitorLibrary() {
-    const feedback = document.getElementById('scan-feedback');
-    const interval = setInterval(() => {
-        if (typeof Html5QrCode !== "undefined") {
-            feedback.innerText = "✅ 시스템 준비 완료. 버튼을 누르세요.";
-            clearInterval(interval);
-        } else {
-            feedback.innerText = "⏳ 스캔 모듈 활성화 중...";
-        }
-    }, 500);
+function customBack() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput.value !== "") {
+        searchInput.value = "";
+        filterTable();
+    } else {
+        if(confirm("앱을 종료하시겠습니까?")) window.close();
+    }
 }
 
 function updateStatus(msg, bg) {
@@ -158,19 +162,27 @@ function loadFromServer() {
         updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
         renderTable();
     }).catch(() => {
-        if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
+        if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패 (파일 업로드 필요)", "#fff3cd");
     });
 }
 
+// 4. 카메라 실행 (후면 고정 및 권한 최적화)
 function startScanner() {
-    if (typeof Html5QrCode === "undefined") return alert("아직 로딩 중입니다. 잠시만 더 기다려주세요.");
-    if (html5QrCode) return;
+    const feedback = document.getElementById('scan-feedback');
+    const startBtn = document.getElementById('camera-btn');
+    
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => { html5QrCode = null; initCamera(); }).catch(() => initCamera());
+    } else {
+        initCamera();
+    }
+}
 
+function initCamera() {
     const feedback = document.getElementById('scan-feedback');
     html5QrCode = new Html5QrCode("reader");
-    
     html5QrCode.start(
-        { facingMode: "environment" }, 
+        { facingMode: "environment" }, // 후면 카메라 고정
         { fps: 15, qrbox: { width: 250, height: 250 } },
         (text) => {
             document.getElementById('search-input').value = text;
@@ -178,11 +190,9 @@ function startScanner() {
             feedback.innerText = "✅ 스캔 성공: " + text;
         }
     ).then(() => {
-        feedback.innerText = "📷 스캐너 활성화됨 (QR을 비춰주세요)";
-        document.getElementById('start-btn').innerText = "📷 카메라 재시작";
+        feedback.innerText = "📷 스캐너가 켜졌습니다. QR을 찍어주세요.";
     }).catch(err => {
-        feedback.innerHTML = `<span style='color:red'>❌ 에러: ${err}</span>`;
-        html5QrCode = null;
+        feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span><br><small>반드시 HTTPS 주소로 접속해야 합니다.</small>`;
     });
 }
 
@@ -195,7 +205,8 @@ function renderTable(filter = "") {
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     if (currentPage > totalPages) currentPage = 1;
-    const paginatedItems = filtered.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage);
+    const start = (currentPage - 1) * itemsPerPage;
+    const paginatedItems = filtered.slice(start, start + itemsPerPage);
 
     let html = "";
     paginatedItems.forEach((row) => {
@@ -208,7 +219,7 @@ function renderTable(filter = "") {
                 <b style="color:var(--main-color); font-size:20px;">${stock.toLocaleString()}개</b>
             </div>
             <div style="margin:8px 0; font-size:16px;"><strong>${row['규격'] || '-'}</strong></div>
-            <div style="font-size:12px; color:#666;">금액: ${(stock * price).toLocaleString()}원</div>
+            <div style="font-size:12px; color:#666;">예상금액: ${(stock * price).toLocaleString()}원</div>
             ${isAdmin ? `
             <div style="margin-top:10px;">
                 <input type="number" value="${stock}" style="border:1px solid #ffcccc" onchange="updateVal('${row['위치ID']}', '현재재고', this.value)">
@@ -240,16 +251,6 @@ function filterTable() {
     renderTable(document.getElementById('search-input').value);
 }
 
-function customBack() {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput.value !== "") {
-        searchInput.value = "";
-        filterTable();
-    } else {
-        if(confirm("앱을 종료하시겠습니까?")) window.close();
-    }
-}
-
 function updateVal(locId, field, val) {
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
     if(item) {
@@ -261,30 +262,30 @@ function updateVal(locId, field, val) {
 async function pushIndexToGithub() {
     const token = document.getElementById('gh-token').value;
     const content = document.getElementById('index-code').value;
-    if(!token || !content) return alert("데이터를 입력하세요.");
+    if(!token || !content) return alert("토큰과 코드를 입력하세요.");
     const btn = document.getElementById('app-update-btn');
-    btn.disabled = true;
+    btn.disabled = true; btn.innerText = "업데이트 중...";
     try {
         const base64Content = btoa(unescape(encodeURIComponent(content)));
         const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = "";
         if(getRes.ok) { const getData = await getRes.json(); sha = getData.sha; }
-        await fetch(apiURL, {
+        const putRes = await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "앱 업데이트", content: base64Content, sha: sha })
         });
-        alert("✅ 업데이트 성공!");
-    } catch (err) { alert(err.message); }
-    finally { btn.disabled = false; }
+        if(putRes.ok) alert("✅ 앱 업데이트 성공!");
+    } catch (err) { alert("에러: " + err.message); }
+    finally { btn.disabled = false; btn.innerText = "🚀 앱 소스코드 업데이트"; }
 }
 
 async function pushToGithub() {
     const token = document.getElementById('gh-token').value;
-    if(!token) return alert("토큰이 없습니다.");
+    if(!token) return alert("토큰을 입력하세요.");
     const btn = document.getElementById('sync-btn');
-    btn.disabled = true;
+    btn.disabled = true; btn.innerText = "저장 중...";
     try {
         const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
         const wb = XLSX.utils.book_new();
@@ -295,14 +296,17 @@ async function pushToGithub() {
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = "";
         if(getRes.ok) { const getData = await getRes.json(); sha = getData.sha; }
-        await fetch(apiURL, {
+        const putRes = await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "데이터 업데이트", content: base64Content, sha: sha })
         });
-        alert("✅ 서버 저장 성공!");
-    } catch (err) { alert(err.message); }
-    finally { btn.disabled = false; }
+        if(putRes.ok) {
+            alert("✅ 데이터 저장 성공!");
+            updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
+        }
+    } catch (err) { alert("에러: " + err.message); }
+    finally { btn.disabled = false; btn.innerText = "💾 변경 데이터 서버 저장"; }
 }
 
 function toggleAdmin() {
@@ -327,6 +331,7 @@ function handleFileUpload(event) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        updateStatus("📂 로컬 파일 로드 완료 (서버 저장 필요)", "#d1ecf1");
         renderTable();
     };
     reader.readAsArrayBuffer(event.target.files[0]);
@@ -349,6 +354,7 @@ async function generateAllQRs() {
     zip.generateAsync({type:"blob"}).then(blob => {
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = "QR_Codes.zip"; a.click();
+        status.innerText = "✅ 다운로드 완료";
     });
 }
 </script>
