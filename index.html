@@ -14,9 +14,9 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897871.png">
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.1/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.1/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -64,7 +64,7 @@
 </div>
 
 <div class="container">
-    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 로딩 중...</div>
+    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 시스템 초기화 중...</div>
 
     <div class="admin-ui">
         <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 통합 설정</h4>
@@ -86,7 +86,7 @@
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">시스템 초기화 중...</div>
+        <div id="scan-feedback">카메라를 불러오는 중입니다...</div>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -113,9 +113,11 @@ const REPO = 'bschoi-4126/list';
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '규격', '단가', '현재재고', '재고금액'];
 
 window.onload = function() {
+    // 1. 데이터 로드 시작
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
+    // 2. 뒤로가기 제어
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
@@ -135,33 +137,23 @@ function loadFromServer() {
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
         renderTable();
-        checkLibraryAndStart();
+        // 라이브러리 체크 후 카메라 시작
+        checkAndStartScanner();
     }).catch(() => {
         if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
-        checkLibraryAndStart();
+        checkAndStartScanner();
     });
 }
 
-function checkLibraryAndStart() {
+function checkAndStartScanner() {
     const feedback = document.getElementById('scan-feedback');
-    let attempts = 0;
-    const interval = setInterval(() => {
-        attempts++;
-        // 필요한 라이브러리들이 모두 로드되었는지 체크
-        const libsLoaded = typeof Html5QrCode !== 'undefined' && typeof XLSX !== 'undefined' && typeof JSZip !== 'undefined';
-        
-        if (libsLoaded) {
-            clearInterval(interval);
-            startScanner();
-        } else if (attempts > 50) { // 5초 경과
-            clearInterval(interval);
-            let missing = [];
-            if(typeof Html5QrCode === 'undefined') missing.push('Scanner');
-            if(typeof XLSX === 'undefined') missing.push('Excel');
-            if(typeof JSZip === 'undefined') missing.push('Zip');
-            feedback.innerHTML = `<span style='color:red'>❌ 로드 실패: ${missing.join(', ')} 모듈을 불러올 수 없습니다. 인터넷 상태를 확인하세요.</span>`;
-        }
-    }, 100);
+    // 라이브러리가 로드되었는지 재귀적으로 확인 (인터넷 속도 대응)
+    if (typeof Html5QrCode !== "undefined") {
+        startScanner();
+    } else {
+        feedback.innerText = "⏳ 라이브러리 로딩을 기다리는 중... (최대 3초)";
+        setTimeout(checkAndStartScanner, 500);
+    }
 }
 
 function startScanner() {
@@ -170,6 +162,7 @@ function startScanner() {
     
     try {
         html5QrCode = new Html5QrCode("reader");
+        // 1번: 후면 카메라(environment) 고정 실행
         html5QrCode.start(
             { facingMode: "environment" }, 
             { fps: 15, qrbox: 250 },
@@ -177,13 +170,14 @@ function startScanner() {
                 document.getElementById('search-input').value = text;
                 filterTable();
                 feedback.innerText = "✅ 스캔 성공: " + text;
-                setTimeout(() => { if(feedback.innerText.includes("스캔 성공")) feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
+                setTimeout(() => { if(feedback.innerText.includes("스캔")) feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
             }
         ).catch(err => {
-            feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
+            // 2번: 권한 미허용 혹은 보안(HTTP) 문제 시 안내
+            feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span><br><small>HTTPS 접속 및 카메라 권한 허용을 확인하세요.</small>`;
         });
     } catch (e) {
-        feedback.innerHTML = `<span style='color:red'>❌ 스캐너 초기화 오류</span>`;
+        feedback.innerHTML = `<span style='color:red'>❌ 초기화 실패: ${e.message}</span>`;
     }
 }
 
