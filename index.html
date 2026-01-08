@@ -35,7 +35,6 @@
         #scan-feedback { text-align: center; padding: 12px; margin-top: 8px; border-radius: 8px; font-weight: bold; background: #e9ecef; font-size: 14px; }
 
         .btn { padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; transition: 0.2s; }
-        .btn:active { opacity: 0.7; }
         .btn-blue { background: var(--main-color); color: white; }
         .btn-red { background: var(--admin-color); color: white; }
         .btn-green { background: var(--success-color); color: white; }
@@ -43,7 +42,7 @@
         .btn-gray { background: #6c757d; color: white; }
 
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 150px; font-family: monospace; font-size: 12px; resize: vertical; }
+        textarea { height: 150px; font-family: monospace; font-size: 12px; }
 
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; }
         .admin-mode .admin-ui { display: block; }
@@ -53,7 +52,7 @@
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 30px; }
         .page-btn { padding: 10px 15px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .page-btn:disabled { background: #eee; cursor: default; color: #999; }
+        .page-btn:disabled { background: #eee; color: #999; }
     </style>
 </head>
 <body>
@@ -72,7 +71,6 @@
         <input type="password" id="gh-token" placeholder="GitHub 토큰(ghp_...)">
         
         <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #ddd;">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold;">1. 데이터 및 양식 관리</p>
             <button class="btn btn-gray" style="margin:0;" onclick="downloadTemplate()">기본 양식 받기</button>
             <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">새 엑셀 파일 불러오기</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
@@ -81,7 +79,7 @@
         </div>
 
         <div style="background:#fefefe; padding:10px; border-radius:8px; border:1px solid var(--app-update);">
-            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">2. 프로그램(INDEX) 업데이트</p>
+            <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:var(--app-update);">인덱스 서버 업데이트</p>
             <textarea id="index-code" placeholder="새로운 index.html 코드를 붙여넣으세요."></textarea>
             <button class="btn btn-purple" id="app-update-btn" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
         </div>
@@ -119,7 +117,7 @@ window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
     
-    // 뒤로가기 제어: 히스토리 조작을 통해 앱 종료 방지
+    // 뒤로가기 제어 로직
     history.pushState(null, null, location.href);
     window.onpopstate = function() {
         customBack();
@@ -141,28 +139,22 @@ function loadFromServer() {
         renderTable();
         startScanner();
     }).catch(() => {
-        if (inventoryData.length === 0) {
-            updateStatus("⚠️ 서버 데이터 로드 실패. 파일을 수동 업로드하세요.", "#fff3cd");
-        }
+        if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
         startScanner();
     });
 }
 
+// 1번: 후면 카메라 고정 및 2번: 권한 요청 최소화 로직 적용
 function startScanner() {
-    if (html5QrCode) return;
-    const feedback = document.getElementById('scan-feedback');
+    if (html5QrCode) return; // 이미 실행 중이면 중복 실행 방지
     
-    // 휴대폰 브라우저 보안 정책 대응: 반드시 HTTPS 필요
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        feedback.innerHTML = "<span style='color:red'>❌ 에러: HTTPS 보안 연결이 필요합니다.</span>";
-        return;
-    }
-
+    const feedback = document.getElementById('scan-feedback');
     html5QrCode = new Html5QrCode("reader");
-    // 후면 카메라 고정(environment) 및 권한 요청 최적화
+    
+    // [핵심] facingMode: "environment"로 후면 카메라 고정
     html5QrCode.start(
         { facingMode: "environment" }, 
-        { fps: 15, qrbox: {width: 250, height: 250} },
+        { fps: 15, qrbox: 250 },
         (text) => {
             document.getElementById('search-input').value = text;
             filterTable();
@@ -180,10 +172,6 @@ function renderTable(filter = "") {
         String(item['위치ID'] || '').toLowerCase().includes(filter.toLowerCase()) || 
         String(item['규격'] || '').toLowerCase().includes(filter.toLowerCase())
     );
-
-    if (inventoryData.length > 0 && document.getElementById('status-msg').innerText.includes("로드 실패")) {
-        updateStatus("✅ 데이터 표시 중", "#d4edda");
-    }
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     if (currentPage > totalPages) currentPage = 1;
@@ -208,7 +196,7 @@ function renderTable(filter = "") {
             </div>` : ''}
         </div>`;
     });
-    listDiv.innerHTML = html || "<p style='text-align:center; padding:30px; color:#999;'>결과가 없습니다.</p>";
+    listDiv.innerHTML = html || "<p style='text-align:center; padding:30px; color:#999;'>데이터가 없습니다.</p>";
     renderPagination(totalPages, filter);
 }
 
