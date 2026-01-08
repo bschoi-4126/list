@@ -39,6 +39,7 @@
         .btn-purple { background: var(--update-color); color: white; }
         
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 100px; font-family: monospace; font-size: 12px; }
 
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; text-align: left; }
         .admin-mode .admin-ui { display: block; }
@@ -134,10 +135,13 @@ function loadFromServer() {
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
         inventoryData = rawData.map(item => {
+            // 위치 ID 자동 구성
             if (!item['위치ID']) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
                 item['위치ID'] = parts.join('-');
             }
+            // 재고 금액 자동 계산 로직 추가
+            item['재고금액'] = (parseInt(item['단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
         });
 
@@ -290,6 +294,7 @@ function updateVal(locId, val) {
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
     if(item) {
         item['현재재고'] = parseInt(val) || 0;
+        // 수정 시에도 재고 금액 자동 계산
         item['재고금액'] = item['현재재고'] * (parseInt(item['단가']) || 0);
     }
 }
@@ -358,6 +363,8 @@ function handleFileUpload(event) {
                 const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
                 item['위치ID'] = parts.join('-');
             }
+            // 업로드 시에도 재고 금액 자동 계산
+            item['재고금액'] = (parseInt(item['단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
         });
         
@@ -374,20 +381,18 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "리스트.xlsx");
 }
 
-// [핵심] A4 용지 규격 (210x297mm) PDF 일괄 생성 로직
 async function generateAllQRs() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const qrDiv = document.getElementById('qrcode-hidden');
     const status = document.getElementById('qr-status');
     
-    const cellW = 30; // 가로 칸 사이즈 (30mm)
-    const cellH = 30; // 세로 칸 사이즈 (30mm)
-    const cols = 7;   // 가로 7개
-    const rows = 9;   // 세로 9개
-    const itemsPerPagePDF = cols * rows; // 페이지당 63개
+    const cellW = 30; 
+    const cellH = 30; 
+    const cols = 7;   
+    const rows = 9;   
+    const itemsPerPagePDF = cols * rows; 
     
-    // 여백 계산 (가로 210mm, 세로 297mm 기준)
     const startX = (210 - (cellW * cols)) / 2;
     const startY = (297 - (cellH * rows)) / 2;
 
@@ -395,12 +400,10 @@ async function generateAllQRs() {
         let id = String(inventoryData[i]['위치ID']);
         if(!id || id.length < 1) continue;
 
-        // 새 페이지 추가 (첫 데이터 제외, 63개마다)
         if (i > 0 && i % itemsPerPagePDF === 0) {
             doc.addPage();
         }
 
-        // 현재 페이지에서의 위치 계산
         const idxInPage = i % itemsPerPagePDF;
         const col = idxInPage % cols;
         const row = Math.floor(idxInPage / cols);
@@ -408,34 +411,25 @@ async function generateAllQRs() {
         const posX = startX + (col * cellW);
         const posY = startY + (row * cellH);
 
-        // QR 생성 (임시 div)
         qrDiv.innerHTML = "";
         const qr = new QRCode(qrDiv, { text: id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
         
-        // QR 이미지가 생성될 때까지 아주 짧은 대기
         await new Promise(r => setTimeout(r, 40));
         
         const canvas = qrDiv.querySelector('canvas');
         if (canvas) {
             const imgData = canvas.toDataURL("image/png");
-            
-            // 1. 위치 ID 텍스트 (조그맣게 상단 중앙)
             doc.setFontSize(6);
             doc.text(id, posX + (cellW / 2), posY + 4, { align: "center" });
-            
-            // 2. QR 코드 (28x28mm 정도로 아래 배치)
             doc.addImage(imgData, 'PNG', posX + 1, posY + 5, 28, 28);
-            
-            // 3. 외곽선 (커팅 가이드용 점선)
             doc.setDrawColor(200);
             doc.setLineDashPattern([1, 1], 0);
             doc.rect(posX, posY, cellW, cellH);
         }
-        
         status.innerText = `PDF 생성 중... (${i+1}/${inventoryData.length})`;
     }
 
-    doc.save("재고관리_QR코드_인쇄물.pdf");
+    doc.save("QR코드_인쇄물_A4.pdf");
     status.innerText = "✅ PDF 다운로드 완료!";
 }
 </script>
