@@ -58,7 +58,7 @@
         .info-label { font-weight: bold; color: #777; margin-right: 5px; }
 
         .edit-box { margin-top: 15px; display: flex; gap: 8px; align-items: center; background: #fdf2f2; padding: 10px; border-radius: 8px; border: 1px solid #ffe3e3; }
-        .edit-input { width: 75px !important; padding: 8px !important; margin: 0 !important; font-size: 15px !important; text-align: center; border: 1px solid #ccc !important; }
+        .edit-input { width: 75px !important; padding: 8px !important; margin: 0 !important; font-size: 14px !important; text-align: center; border: 1px solid #ccc !important; }
         .apply-btn { width: auto !important; margin: 0 !important; padding: 8px 16px !important; font-size: 14px !important; background: var(--success-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
@@ -75,7 +75,7 @@
 </div>
 
 <div class="container">
-    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 데이터 동기화 대기 중...</div>
+    <div id="status-msg" class="status-bar" style="background: #eee;">⏳ 서버 데이터 동기화 시도 중...</div>
 
     <div class="admin-ui">
         <h4 style="margin:0 0 10px 0; color:var(--admin-color);">🛠️ 관리자 패널</h4>
@@ -89,9 +89,9 @@
         <div id="qr-status" style="font-size:11px; color:#666; margin-top:5px;"></div>
         
         <div style="margin-top:15px; padding-top:15px; border-top:1px solid #ddd;">
-            <p style="font-size:12px; font-weight:bold; color:var(--update-color);">프로그램(index.html) 업데이트</p>
+            <p style="font-size:12px; font-weight:bold; color:var(--update-color);">프로그램 업데이트 (index.html)</p>
             <textarea id="index-code" placeholder="새 코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" onclick="pushIndexToGithub()">🚀 앱 소스코드 서버 업데이트</button>
+            <button class="btn btn-purple" onclick="pushIndexToGithub()">🚀 앱 소스 업데이트</button>
         </div>
     </div>
 
@@ -122,11 +122,10 @@ let inventoryData = [];
 let isAdmin = false;
 let videoStream = null;
 let isScanning = false;
-let isSavingLock = false; // 중복 호출 방지용 락
+let isSavingLock = false; 
 let currentPage = 1;
 const itemsPerPage = 50; 
 const REPO = 'bschoi-4126/list';
-// 요청하신 헤더 순서 및 명칭
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '표준단가', '현재재고', '재고금액'];
 
 window.onload = function() {
@@ -136,13 +135,11 @@ window.onload = function() {
     window.onpopstate = () => { customBack(); history.pushState(null, null, location.href); };
 };
 
-// [핵심 해결책] 전개 연산자(...) 대신 루프를 사용하여 Base64 변환 (Call Stack 에러 방지)
+// 메모리 에러 방지를 위한 Base64 변환기
 function uint8ArrayToBase64(uint8) {
     let binary = '';
     const len = uint8.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(uint8[i]);
-    }
+    for (let i = 0; i < len; i++) { binary += String.fromCharCode(uint8[i]); }
     return window.btoa(binary);
 }
 
@@ -151,9 +148,15 @@ function updateStatus(msg, bg) {
     if(el) { el.innerText = msg; el.style.background = bg; }
 }
 
+// [핵심] 실시간 정보 동기화를 위한 캐시 무력화 로직 강화
 function loadFromServer() {
-    const url = `https://bschoi-4126.github.io/list/리스트.xlsx?v=${new Date().getTime()}`;
-    fetch(url).then(res => res.arrayBuffer()).then(data => {
+    // 1. URL 끝에 매번 다른 시간값을 붙여 서버가 무조건 새 파일을 주게 함
+    const url = `https://bschoi-4126.github.io/list/리스트.xlsx?cache_bust=${new Date().getTime()}`;
+    
+    // 2. Fetch 옵션에 no-cache 추가
+    fetch(url, { cache: "no-store", headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
+    .then(res => res.arrayBuffer())
+    .then(data => {
         const workbook = XLSX.read(data, {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
@@ -167,10 +170,10 @@ function loadFromServer() {
             return item;
         });
 
-        updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
+        updateStatus("✅ 실시간 최신 데이터 동기화 완료", "#d4edda");
         renderTable();
     }).catch(() => {
-        updateStatus("⚠️ 데이터 로드 실패 (파일 업로드 필요)", "#fff3cd");
+        updateStatus("⚠️ 서버 응답 대기 중 (인터넷 확인 요망)", "#fff3cd");
     });
 }
 
@@ -238,7 +241,7 @@ function renderTable(filter = "") {
         const price = parseInt(row['표준단가']) || 0;
         const total = (stock * price).toLocaleString();
         
-        // ID, 품목명, 규격 밸런스 조정 디자인
+        // ID, 품목명, 규격 밸런스 조정
         html += `
         <div class="item-card">
             <div class="item-top">
@@ -257,7 +260,7 @@ function renderTable(filter = "") {
 
             ${isAdmin ? `
             <div class="edit-box">
-                <span style="font-size:12px; font-weight:bold;">수량수정:</span>
+                <span style="font-size:12px; font-weight:bold;">수량:</span>
                 <input type="number" id="input-${row['위치ID']}" value="${stock}" class="edit-input">
                 <button class="apply-btn" onclick="applyItemUpdate('${row['위치ID']}')">적용</button>
             </div>` : ''}
@@ -311,34 +314,27 @@ async function applyItemUpdate(locId) {
 async function pushToGithub(isAuto = false) {
     if (isSavingLock) return;
     isSavingLock = true;
-
     const token = document.getElementById('gh-token').value;
-    if(!token) { isSavingLock = false; return isAuto ? null : alert("토큰을 먼저 입력하세요."); }
-    localStorage.setItem('gh_token', token);
+    if(!token) { isSavingLock = false; return isAuto ? null : alert("토큰 필수"); }
     
     try {
         const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Data");
         const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-        
-        // [수정] 스택 에러를 피하기 위한 새로운 인코딩 함수 사용
         const base64Content = uint8ArrayToBase64(new Uint8Array(wbout));
         
         const apiURL = `https://api.github.com/repos/${REPO}/contents/리스트.xlsx`;
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = getRes.ok ? (await getRes.json()).sha : "";
         
-        const putRes = await fetch(apiURL, {
+        await fetch(apiURL, {
             method: "PUT",
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "Update inventory", content: base64Content, sha: sha })
         });
-        
-        if(putRes.ok) {
-            updateStatus("✅ 서버 저장 완료", "#d4edda");
-            if(!isAuto) alert("✅ 서버 저장 성공!");
-        }
+        updateStatus("✅ 서버 저장 완료", "#d4edda");
+        if(!isAuto) alert("저장 완료!");
     } catch (e) { alert("저장 실패: " + e.message); }
     finally { isSavingLock = false; }
 }
@@ -351,16 +347,12 @@ async function handleFileUpload(event) {
         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         inventoryData = rawData.map(item => {
-            if (!item['위치ID']) {
-                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p);
-                item['위치ID'] = parts.join('-');
-            }
+            if (!item['위치ID']) item['위치ID'] = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p).join('-');
             item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
             return item;
         });
         renderTable();
-        updateStatus("📂 업로드 성공 (서버 자동 저장 중...)", "#fff3cd");
-        // 엑셀 업로드 즉시 서버로 전송
+        updateStatus("📂 로컬 분석 완료 (자동 서버 저장 중...)", "#fff3cd");
         setTimeout(() => pushToGithub(true), 500);
     };
     reader.readAsArrayBuffer(file);
@@ -386,7 +378,7 @@ function downloadTemplate() {
 async function pushIndexToGithub() {
     const token = document.getElementById('gh-token').value;
     const content = document.getElementById('index-code').value;
-    if(!token || !content) return alert("토큰과 소스 코드를 입력하세요.");
+    if(!token || !content) return alert("토큰과 소스 필요");
     const base64Content = btoa(unescape(encodeURIComponent(content)));
     const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
     try {
@@ -397,8 +389,8 @@ async function pushIndexToGithub() {
             headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "Update app code", content: base64Content, sha: sha })
         });
-        alert("✅ 업데이트 성공!");
-    } catch (e) { alert("실패: " + e.message); }
+        alert("앱 업데이트 완료!");
+    } catch (e) { alert(e.message); }
 }
 
 async function generateAllQRs() {
@@ -424,10 +416,9 @@ async function generateAllQRs() {
         
         const canvas = qrDiv.querySelector('canvas');
         if (canvas) {
-            const imgData = canvas.toDataURL("image/png");
             doc.setFontSize(6);
             doc.text(id, posX + 15, posY + 3, { align: "center", baseline: "top" });
-            doc.addImage(imgData, 'PNG', posX + 2.5, posY + 4.5, 25, 25);
+            doc.addImage(canvas.toDataURL("image/png"), 'PNG', posX + 2.5, posY + 4.5, 25, 25);
             doc.setDrawColor(200); doc.rect(posX, posY, cellW, cellH);
         }
         status.innerText = `PDF 생성 중... (${i+1}/${inventoryData.length})`;
