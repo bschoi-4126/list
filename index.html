@@ -86,8 +86,7 @@
 
     <div class="card">
         <div id="reader"></div>
-        <div id="scan-feedback">카메라 준비 중...</div>
-        <button id="camera-retry-btn" class="btn btn-gray" onclick="startScanner()" style="display:none; padding:8px; font-size:12px;">📷 카메라 재시도</button>
+        <div id="scan-feedback">카메라 라이브러리 로딩 중...</div>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
@@ -126,7 +125,7 @@ window.onload = function() {
 
 function updateStatus(msg, bg) {
     const el = document.getElementById('status-msg');
-    el.innerText = msg; el.style.background = bg;
+    if(el) { el.innerText = msg; el.style.background = bg; }
 }
 
 function loadFromServer() {
@@ -136,58 +135,50 @@ function loadFromServer() {
         inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         updateStatus("✅ 서버 데이터 동기화 완료", "#d4edda");
         renderTable();
-        setTimeout(startScanner, 500); // DOM 안정을 위해 약간의 지연 후 실행
+        checkLibraryAndStart();
     }).catch(() => {
         if(inventoryData.length === 0) updateStatus("⚠️ 서버 데이터 로드 실패", "#fff3cd");
-        startScanner();
+        checkLibraryAndStart();
     });
+}
+
+function checkLibraryAndStart() {
+    const feedback = document.getElementById('scan-feedback');
+    // 라이브러리가 로드될 때까지 최대 5초간 확인
+    let attempts = 0;
+    const interval = setInterval(() => {
+        attempts++;
+        if (typeof Html5QrCode !== 'undefined') {
+            clearInterval(interval);
+            startScanner();
+        } else if (attempts > 50) {
+            clearInterval(interval);
+            feedback.innerHTML = "<span style='color:red'>❌ 라이브러리 로드 실패. 인터넷 연결을 확인하세요.</span>";
+        }
+    }, 100);
 }
 
 function startScanner() {
+    if (html5QrCode) return;
     const feedback = document.getElementById('scan-feedback');
-    const retryBtn = document.getElementById('camera-retry-btn');
     
-    // 1. 보안 환경 체크
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        feedback.innerHTML = "<span style='color:red'>❌ 에러: HTTPS 연결이 아니거나 카메라가 지원되지 않습니다.</span>";
-        return;
-    }
-
-    // 2. 기존 스캐너 정리 및 재시작 (권한 요청 최소화)
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            html5QrCode = null;
-            initScanner();
-        }).catch(() => {
-            html5QrCode = null;
-            initScanner();
+    try {
+        html5QrCode = new Html5QrCode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 15, qrbox: 250 },
+            (text) => {
+                document.getElementById('search-input').value = text;
+                filterTable();
+                feedback.innerText = "✅ 스캔 성공: " + text;
+                setTimeout(() => { feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
+            }
+        ).catch(err => {
+            feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
         });
-    } else {
-        initScanner();
+    } catch (e) {
+        feedback.innerHTML = `<span style='color:red'>❌ 초기화 오류: ${e.message}</span>`;
     }
-}
-
-function initScanner() {
-    const feedback = document.getElementById('scan-feedback');
-    const retryBtn = document.getElementById('camera-retry-btn');
-    
-    html5QrCode = new Html5QrCode("reader");
-    
-    // 1번: 후면 카메라 고정 (environment)
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 15, qrbox: 250 },
-        (text) => {
-            document.getElementById('search-input').value = text;
-            filterTable();
-            feedback.innerText = "✅ 스캔 성공: " + text;
-            setTimeout(() => { feedback.innerText = "QR을 스캔하면 자동으로 검색됩니다."; }, 2000);
-        }
-    ).catch(err => {
-        console.error("Camera Start Error:", err);
-        feedback.innerHTML = `<span style='color:red'>❌ 카메라 에러: ${err}</span>`;
-        retryBtn.style.display = "block"; // 실패 시 재시도 버튼 표시
-    });
 }
 
 function renderTable(filter = "") {
