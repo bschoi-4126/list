@@ -58,7 +58,7 @@
 
 <div class="header">
     <div class="back-btn" onclick="customBack()"><i class="fas fa-arrow-left"></i></div>
-    <h2 style="margin:0; font-size: 18px;">📦 제민 재고 통합 관리</h2>
+    <h2 style="margin:0; font-size: 18px;">재고 통합 관리</h2>
     <div id="auth-status" onclick="toggleAdmin()" style="font-size: 11px; cursor: pointer; text-decoration: underline;">🔐 직원 모드</div>
 </div>
 
@@ -132,7 +132,7 @@ function loadFromServer() {
         const workbook = XLSX.read(data, {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
-        // [ID 자동 구성 로직 복구] 위치ID가 없으면 층+구역+랙+단을 합쳐서 생성
+        // 위치ID 자동 구성 로직
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
                 item['위치ID'] = String(item['층'] || '') + String(item['구역'] || '') + String(item['랙'] || '') + String(item['단'] || '');
