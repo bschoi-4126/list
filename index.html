@@ -132,10 +132,11 @@ function loadFromServer() {
         const workbook = XLSX.read(data, {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
-        // 위치ID 자동 구성 로직
+        // [ID 자동 구성 로직 수정] 하이픈(-) 포함 형식: 층-구역-랙-단
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
-                item['위치ID'] = String(item['층'] || '') + String(item['구역'] || '') + String(item['랙'] || '') + String(item['단'] || '');
+                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
+                item['위치ID'] = parts.join('-');
             }
             return item;
         });
@@ -350,9 +351,11 @@ function handleFileUpload(event) {
         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
+        // [ID 자동 구성 로직 수정] 하이픈(-) 포함 형식
         inventoryData = rawData.map(item => {
             if (!item['위치ID']) {
-                item['위치ID'] = String(item['층'] || '') + String(item['구역'] || '') + String(item['랙'] || '') + String(item['단'] || '');
+                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p !== undefined && p !== null && p !== '');
+                item['위치ID'] = parts.join('-');
             }
             return item;
         });
