@@ -43,23 +43,23 @@
         .admin-ui { display: none; border: 2px dashed var(--admin-color); padding: 15px; border-radius: 12px; margin-top: 10px; background: #fff5f5; text-align: left; }
         .admin-mode .admin-ui { display: block; }
 
-        /* 아이템 카드 디자인 밸런스 조정 */
+        /* 아이템 카드 디자인 밸런스 조정: 규격(Spec) 강조 */
         .item-card { border-left: 8px solid var(--main-color); padding: 18px; background: #fff; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: left; position: relative; }
         .admin-mode .item-card { border-left-color: var(--admin-color); }
         
         .item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
         .item-id { font-size: 13px; color: #007bff; font-weight: bold; background: #e7f1ff; padding: 2px 8px; border-radius: 4px; }
-        .stock-display { font-size: 24px; font-weight: 900; color: var(--main-color); }
+        .stock-display { font-size: 24px; font-weight: 900; color: var(--main-color); position: absolute; top: 15px; right: 15px; }
         
-        .item-title { font-size: 19px; font-weight: 800; color: #111; margin-bottom: 4px; line-height: 1.3; width: 75%; }
-        .item-spec { font-size: 15px; color: #555; margin-bottom: 12px; font-weight: 500; }
+        /* 규격과 품목명 크기 및 볼드 반전 */
+        .item-spec { font-size: 19px; font-weight: 800; color: #111; margin-bottom: 4px; line-height: 1.3; width: 75%; }
+        .item-title { font-size: 15px; color: #555; margin-bottom: 12px; font-weight: 500; }
 
-        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #444; border-top: 1px solid #eee; padding-top: 12px; }
+        .item-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 14px; color: #444; border-top: 1px solid #eee; padding-top: 10px; }
         .info-label { font-weight: bold; color: #777; margin-right: 5px; }
 
-        /* 수량 수정 및 적용 버튼 */
         .edit-box { margin-top: 15px; display: flex; gap: 8px; align-items: center; background: #fdf2f2; padding: 10px; border-radius: 8px; border: 1px solid #ffe3e3; }
-        .edit-input { width: 75px !important; padding: 8px !important; margin: 0 !important; font-size: 14px !important; text-align: center; }
+        .edit-input { width: 80px !important; padding: 8px !important; margin: 0 !important; font-size: 14px !important; text-align: center; }
         .apply-btn { width: auto !important; margin: 0 !important; padding: 8px 15px !important; font-size: 14px !important; background: var(--success-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 20px 0; padding-bottom: 50px; }
@@ -90,22 +90,19 @@
         <div id="qr-status" style="font-size:11px; color:#666; margin-top:5px;"></div>
         
         <div style="margin-top:15px; padding-top:15px; border-top:1px solid #ddd;">
-            <p style="font-size:12px; font-weight:bold; color:var(--update-color);">프로그램 업데이트 (index.html)</p>
             <textarea id="index-code" placeholder="새 코드를 붙여넣으세요."></textarea>
-            <button class="btn btn-purple" style="background:var(--update-color); color:white;" onclick="pushIndexToGithub()">🚀 앱 소스 업데이트</button>
+            <button class="btn btn-purple" style="background:var(--update-color); color:white;" onclick="pushIndexToGithub()">🚀 소스코드 업데이트</button>
         </div>
     </div>
 
     <div class="card">
-        <div id="camera-wrapper">
-            <video id="video-feed" autoplay playsinline></video>
-        </div>
+        <div id="camera-wrapper"><video id="video-feed" autoplay playsinline></video></div>
         <div id="scan-feedback" style="padding:10px; font-weight:bold;">QR 스캔을 위해 아래 버튼을 누르세요.</div>
         <button id="camera-btn" class="btn btn-blue" onclick="toggleCamera()">📷 카메라 시작하기</button>
     </div>
 
     <div class="card" style="position: sticky; top: 75px; z-index: 900;">
-        <input type="text" id="search-input" placeholder="ID 또는 품목명/규격 검색..." onkeyup="filterTable()">
+        <input type="text" id="search-input" placeholder="ID 또는 규격 검색..." onkeyup="filterTable()">
     </div>
 
     <div id="data-list"></div>
@@ -127,7 +124,6 @@ let isSavingLock = false;
 let currentPage = 1;
 const itemsPerPage = 50; 
 const REPO = 'bschoi-4126/list';
-// 요청하신 품목명 추가 및 명칭(품목코드, 표준단가) 변경
 const HEADERS = ['위치ID', '층', '구역', '랙', '단', '품목코드', '품목명', '규격', '표준단가', '현재재고', '재고금액'];
 
 window.onload = function() {
@@ -137,7 +133,6 @@ window.onload = function() {
     window.onpopstate = () => { customBack(); history.pushState(null, null, location.href); };
 };
 
-// 메모리 초과 에러 방지를 위한 인코딩 함수
 function uint8ArrayToBase64(uint8) {
     let binary = '';
     const len = uint8.byteLength;
@@ -150,52 +145,50 @@ function updateStatus(msg, bg) {
     if(el) { el.innerText = msg; el.style.background = bg; }
 }
 
-// [핵심 해결] CORS 에러 및 실시간 동기화 문제 해결
 function loadFromServer() {
-    // URL 뒤에 매번 다른 시간값을 붙여서 캐시를 무력화하되, 특수 헤더는 제거하여 CORS 통과
     const url = `https://bschoi-4126.github.io/list/리스트.xlsx?v=${new Date().getTime()}`;
-    
-    fetch(url)
-    .then(res => res.arrayBuffer())
-    .then(data => {
+    fetch(url).then(res => res.arrayBuffer()).then(data => {
         const workbook = XLSX.read(data, {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
         inventoryData = rawData.map(item => {
+            // 층 정보 정규화 (1 -> 1F, 1F -> 1F)
+            let floor = String(item['층'] || '');
+            if (floor && !floor.toUpperCase().includes('F')) floor += 'F';
+            item['층'] = floor;
+
+            // 위치ID 자동 구성 로직
             if (!item['위치ID']) {
-                const parts = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p);
+                const parts = [floor, item['구역'], item['랙'], item['단']].filter(p => p);
                 item['위치ID'] = parts.join('-');
             }
-            // 재고금액 자동 계산 (표준단가 x 현재재고)
-            item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
+
+            // 단가 인식 보강
+            const unitPrice = parseInt(item['표준단가']) || parseInt(item['단가']) || 0;
+            item['표준단가'] = unitPrice;
+            item['재고금액'] = unitPrice * (parseInt(item['현재재고']) || 0);
             return item;
         });
 
         updateStatus("✅ 서버 데이터 최신 동기화 완료", "#d4edda");
         renderTable();
-    }).catch(() => {
-        updateStatus("⚠️ 서버 데이터 로드 대기 중", "#fff3cd");
-    });
+    }).catch(() => { updateStatus("⚠️ 데이터 로드 대기 중", "#fff3cd"); });
 }
 
 async function toggleCamera() {
     const video = document.getElementById('video-feed');
     const btn = document.getElementById('camera-btn');
     const fb = document.getElementById('scan-feedback');
-
     if (videoStream) {
         videoStream.getTracks().forEach(t => t.stop());
         videoStream = null; isScanning = false;
-        btn.innerText = "📷 카메라 시작하기";
-        fb.innerText = "카메라가 꺼졌습니다.";
+        btn.innerText = "📷 카메라 시작하기"; fb.innerText = "카메라가 꺼졌습니다.";
         return;
     }
-
     try {
         videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = videoStream;
-        btn.innerText = "📷 카메라 끄기";
-        fb.innerText = "🔍 QR 코드를 인식하는 중...";
+        btn.innerText = "📷 카메라 끄기"; fb.innerText = "🔍 QR 코드를 인식하는 중...";
         startNativeScanner();
     } catch (err) { alert("카메라 권한 오류: " + err); }
 }
@@ -204,17 +197,14 @@ async function startNativeScanner() {
     if (isScanning || !('BarcodeDetector' in window)) return;
     isScanning = true;
     const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const video = document.getElementById('video-feed');
-
     const scan = async () => {
         if (!videoStream) return;
         try {
-            const results = await detector.detect(video);
+            const results = await detector.detect(document.getElementById('video-feed'));
             if (results.length > 0) {
-                const text = results[0].rawValue;
-                document.getElementById('search-input').value = text;
+                document.getElementById('search-input').value = results[0].rawValue;
                 filterTable();
-                document.getElementById('scan-feedback').innerText = "✅ 인식 완료: " + text;
+                document.getElementById('scan-feedback').innerText = "✅ 인식 완료: " + results[0].rawValue;
                 window.scrollTo({ top: document.getElementById('search-input').offsetTop - 100, behavior: 'smooth' });
                 setTimeout(scan, 3000); 
             } else { requestAnimationFrame(scan); }
@@ -242,26 +232,24 @@ function renderTable(filter = "") {
         const price = parseInt(row['표준단가']) || 0;
         const total = (stock * price).toLocaleString();
         
-        // ID, 품목명, 규격 밸런스 조정 디자인
+        // 디자인 변경: 규격(Bold)을 위로, 품목명(Normal)을 아래로
         html += `
         <div class="item-card">
-            <div class="item-top">
-                <span class="item-id">ID: ${row['위치ID'] || '-'}</span>
-                <span class="stock-display">${stock.toLocaleString()}개</span>
-            </div>
-            <div class="item-title">${row['품목명'] || '품목명 없음'}</div>
+            <div class="stock-display">${stock.toLocaleString()}개</div>
+            <div class="item-top"><span class="item-id">ID: ${row['위치ID'] || '-'}</span></div>
             <div class="item-spec">${row['규격'] || '-'}</div>
+            <div class="item-title">${row['품목명'] || '품목명 없음'}</div>
             
             <div class="item-info-grid">
                 <div><span class="info-label">품목코드:</span>${row['품목코드'] || '-'}</div>
-                <div><span class="info-label">위치:</span>${row['층'] || ''}F ${row['구역'] || ''}구역</div>
+                <div><span class="info-label">위치:</span>${row['층'] || ''} ${row['구역'] || ''}구역</div>
                 <div><span class="info-label">표준단가:</span>${price.toLocaleString()}원</div>
                 <div style="color: #e67e22; font-weight:bold;"><span class="info-label">재고금액:</span>${total}원</div>
             </div>
 
             ${isAdmin ? `
             <div class="edit-box">
-                <span style="font-size:12px; font-weight:bold;">수량:</span>
+                <span style="font-size:12px; font-weight:bold;">수량수정:</span>
                 <input type="number" id="input-${row['위치ID']}" value="${stock}" class="edit-input">
                 <button class="apply-btn" onclick="applyItemUpdate('${row['위치ID']}')">적용</button>
             </div>` : ''}
@@ -281,29 +269,15 @@ function renderPagination(totalPages, filter) {
     `;
 }
 
-function changePage(offset, filter) {
-    currentPage += offset;
-    renderTable(filter);
-    window.scrollTo({ top: document.getElementById('search-input').offsetTop - 100, behavior: 'smooth' });
-}
-
-function filterTable() {
-    currentPage = 1;
-    renderTable(document.getElementById('search-input').value);
-}
-
-function customBack() {
-    const input = document.getElementById('search-input');
-    if (input.value !== "") { input.value = ""; filterTable(); }
-    else { if(confirm("앱을 종료하시겠습니까?")) window.close(); }
-}
+function changePage(offset, filter) { currentPage += offset; renderTable(filter); window.scrollTo({ top: document.getElementById('search-input').offsetTop - 100, behavior: 'smooth' }); }
+function filterTable() { currentPage = 1; renderTable(document.getElementById('search-input').value); }
+function customBack() { const input = document.getElementById('search-input'); if (input.value !== "") { input.value = ""; filterTable(); } else { if(confirm("앱을 종료하시겠습니까?")) window.close(); } }
 
 async function applyItemUpdate(locId) {
     if (isSavingLock) return;
     const inputEl = document.getElementById(`input-${locId}`);
     const newVal = parseInt(inputEl.value) || 0;
     const item = inventoryData.find(d => String(d['위치ID']) === String(locId));
-    
     if(item) {
         item['현재재고'] = newVal;
         item['재고금액'] = item['현재재고'] * (parseInt(item['표준단가']) || 0);
@@ -317,47 +291,39 @@ async function pushToGithub(isAuto = false) {
     isSavingLock = true;
     const token = document.getElementById('gh-token').value;
     if(!token) { isSavingLock = false; return isAuto ? null : alert("토큰 필수"); }
-    
     try {
         const ws = XLSX.utils.json_to_sheet(inventoryData, {header: HEADERS});
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Data");
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data");
         const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-        // 루프 방식의 Base64 인코딩으로 스택 에러 방지
         const base64Content = uint8ArrayToBase64(new Uint8Array(wbout));
-        
         const apiURL = `https://api.github.com/repos/${REPO}/contents/리스트.xlsx`;
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = getRes.ok ? (await getRes.json()).sha : "";
-        
-        const putRes = await fetch(apiURL, {
-            method: "PUT",
-            headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+        await fetch(apiURL, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "Stock Update", content: base64Content, sha: sha })
         });
-        
-        if(putRes.ok) {
-            updateStatus("✅ 서버 저장 완료 (약 1분 후 반영)", "#d4edda");
-            if(!isAuto) alert("저장 완료!");
-        }
+        updateStatus("✅ 서버 저장 완료 (약 1분 후 반영)", "#d4edda");
+        if(!isAuto) alert("저장 완료!");
     } catch (e) { alert("저장 실패: " + e.message); }
     finally { isSavingLock = false; }
 }
 
 async function handleFileUpload(event) {
-    const token = document.getElementById('gh-token').value;
-    if(!token) return alert("먼저 GitHub 토큰을 입력하세요.");
     const reader = new FileReader();
     reader.onload = async (e) => {
         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
         const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         inventoryData = rawData.map(item => {
-            if (!item['위치ID']) item['위치ID'] = [item['층'], item['구역'], item['랙'], item['단']].filter(p => p).join('-');
-            item['재고금액'] = (parseInt(item['표준단가']) || 0) * (parseInt(item['현재재고']) || 0);
+            let floor = String(item['층'] || '');
+            if (floor && !floor.toUpperCase().includes('F')) floor += 'F';
+            item['층'] = floor;
+            if (!item['위치ID']) item['위치ID'] = [floor, item['구역'], item['랙'], item['단']].filter(p => p).join('-');
+            const unitPrice = parseInt(item['표준단가']) || parseInt(item['단가']) || 0;
+            item['표준단가'] = unitPrice;
+            item['재고금액'] = unitPrice * (parseInt(item['현재재고']) || 0);
             return item;
         });
-        renderTable();
-        updateStatus("📂 로컬 분석 완료 (서버 저장 중...)", "#fff3cd");
+        renderTable(); updateStatus("📂 서버 자동 저장 중...", "#fff3cd");
         setTimeout(() => pushToGithub(true), 500);
     };
     reader.readAsArrayBuffer(event.target.files[0]);
@@ -366,71 +332,50 @@ async function handleFileUpload(event) {
 function toggleAdmin() {
     const pw = prompt("관리자 암호:");
     if (pw === "4126") {
-        isAdmin = !isAdmin;
-        document.body.classList.toggle('admin-mode', isAdmin);
-        document.getElementById('auth-status').innerText = isAdmin ? "🔓 관리자 모드" : "🔐 직원 모드";
-        renderTable();
+        isAdmin = !isAdmin; document.body.classList.toggle('admin-mode', isAdmin);
+        document.getElementById('auth-status').innerText = isAdmin ? "🔓 관리자 모드" : "🔐 직원 모드"; renderTable();
     }
 }
 
 function downloadTemplate() {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-    XLSX.writeFile(wb, "리스트.xlsx");
+    const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
+    XLSX.utils.book_append_sheet(wb, ws, "Data"); XLSX.writeFile(wb, "리스트.xlsx");
 }
 
 async function pushIndexToGithub() {
     const token = document.getElementById('gh-token').value;
     const content = document.getElementById('index-code').value;
-    if(!token || !content) return alert("토큰과 소스 코드 모두 입력하세요.");
-    const base64Content = btoa(unescape(encodeURIComponent(content)));
-    const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
+    if(!token || !content) return alert("토큰과 소스 필요");
     try {
+        const apiURL = `https://api.github.com/repos/${REPO}/contents/index.html`;
         const getRes = await fetch(apiURL, { headers: { "Authorization": `token ${token}` } });
         let sha = getRes.ok ? (await getRes.json()).sha : "";
-        await fetch(apiURL, {
-            method: "PUT",
-            headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Update app code", content: base64Content, sha: sha })
+        await fetch(apiURL, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Update app code", content: btoa(unescape(encodeURIComponent(content))), sha: sha })
         });
         alert("앱 업데이트 완료!");
-    } catch (e) { alert(e.message); }
+    } catch (e) { alert("실패: " + e.message); }
 }
 
-// A4 QR PDF 출력 (63분할 레이아웃)
 async function generateAllQRs() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
+    const { jsPDF } = window.jspdf; const doc = new jsPDF('p', 'mm', 'a4');
     const qrDiv = document.getElementById('qrcode-hidden');
-    const status = document.getElementById('qr-status');
     const cellW = 30; const cellH = 30; const cols = 7; const rows = 9;   
-    const startX = (210 - (cellW * cols)) / 2;
-    const startY = (297 - (cellH * rows)) / 2;
-
+    const startX = (210 - (cellW * cols)) / 2; const startY = (297 - (cellH * rows)) / 2;
     for (let i = 0; i < inventoryData.length; i++) {
-        let id = String(inventoryData[i]['위치ID']);
-        if(!id) continue;
+        let id = String(inventoryData[i]['위치ID']); if(!id) continue;
         if (i > 0 && i % 63 === 0) doc.addPage();
-        const idx = i % 63;
-        const posX = startX + ((idx % cols) * cellW);
-        const posY = startY + (Math.floor(idx / cols) * cellH);
-
-        qrDiv.innerHTML = "";
-        new QRCode(qrDiv, { text: id, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.H });
+        const idx = i % 63; const posX = startX + ((idx % cols) * cellW); const posY = startY + (Math.floor(idx / cols) * cellH);
+        qrDiv.innerHTML = ""; new QRCode(qrDiv, { text: id, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.H });
         await new Promise(r => setTimeout(r, 45));
-        
         const canvas = qrDiv.querySelector('canvas');
         if (canvas) {
-            doc.setFontSize(6);
-            doc.text(id, posX + 15, posY + 3, { align: "center", baseline: "top" });
+            doc.setFontSize(6); doc.text(id, posX + 15, posY + 2, { align: "center", baseline: "top" });
             doc.addImage(canvas.toDataURL("image/png"), 'PNG', posX + 2.5, posY + 4.5, 25, 25);
             doc.setDrawColor(200); doc.rect(posX, posY, cellW, cellH);
         }
-        status.innerText = `PDF 생성 중... (${i+1}/${inventoryData.length})`;
     }
-    doc.save("재고관리_QR_A4_인쇄물.pdf");
-    status.innerText = "✅ PDF 다운로드 완료!";
+    doc.save("재고관리_QR_인쇄물.pdf");
 }
 </script>
 </body>
