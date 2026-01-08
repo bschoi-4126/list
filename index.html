@@ -3,58 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카메라 테스트</title>
+    <title>카메라 단독 테스트</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #000; border-radius: 10px; overflow: hidden; }
-        .btn { padding: 15px 30px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
-        #result { margin-top: 20px; padding: 15px; background: white; border-radius: 5px; font-weight: bold; min-height: 50px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: #eee; border: 2px solid #333; }
+        .controls { margin: 20px 0; padding: 15px; border: 1px dashed #ccc; }
+        select, button { padding: 10px; font-size: 16px; margin: 5px; }
+        #result { margin-top: 20px; font-weight: bold; color: blue; font-size: 20px; }
     </style>
 </head>
 <body>
 
-    <h2>📷 QR 카메라 단독 테스트</h2>
-    
+    <h2>📷 카메라 작동 테스트</h2>
+    <p>다른 기능 없이 카메라만 테스트합니다.</p>
+
     <div id="reader"></div>
 
-    <div id="result">카메라를 시작해주세요.</div>
+    <div class="controls">
+        <select id="cam-select">
+            <option value="">카메라 로딩 중...</option>
+        </select>
+        <br>
+        <button onclick="refreshCams()">1. 카메라 목록 새로고침</button>
+        <button onclick="startCam()" style="background-color: #007bff; color: white;">2. 선택한 카메라 시작</button>
+        <button onclick="stopCam()">3. 카메라 중지</button>
+    </div>
 
-    <button class="btn" onclick="startCamera()">카메라 시작하기</button>
+    <div id="result">QR 스캔 결과가 여기 표시됩니다.</div>
 
     <script>
         let html5QrCode;
 
-        function startCamera() {
+        // 페이지 로드 시 카메라 목록 불러오기
+        window.onload = refreshCams;
+
+        // [기능 1] 연결된 카메라 목록 가져오기
+        function refreshCams() {
+            const select = document.getElementById('cam-select');
+            Html5QrCode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    select.innerHTML = "";
+                    devices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.id;
+                        option.text = device.label || "카메라 " + (select.length + 1);
+                        select.appendChild(option);
+                    });
+                }
+            }).catch(err => {
+                alert("카메라 목록을 불러올 수 없습니다: " + err);
+            });
+        }
+
+        // [기능 2] 선택한 카메라로 스캔 시작
+        function startCam() {
+            const cameraId = document.getElementById('cam-select').value;
             const resultDiv = document.getElementById('result');
-            
-            // 라이브러리 로드 확인
-            if (typeof Html5QrCode === "undefined") {
-                alert("라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
-                return;
+            if (!cameraId) return alert("카메라를 먼저 선택하세요.");
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    initAndStart(cameraId);
+                }).catch(() => initAndStart(cameraId));
+            } else {
+                initAndStart(cameraId);
             }
+        }
 
-            // 스캐너 객체 생성
+        function initAndStart(cameraId) {
             html5QrCode = new Html5QrCode("reader");
-
-            // 후면 카메라(environment) 모드로 시작
             html5QrCode.start(
-                { facingMode: "environment" }, 
+                cameraId, 
                 { fps: 10, qrbox: 250 },
                 (decodedText) => {
-                    // QR 스캔 성공 시
-                    resultDiv.innerText = "✅ 스캔 성공: " + decodedText;
-                    resultDiv.style.color = "blue";
+                    document.getElementById('result').innerText = "✅ 스캔 성공: " + decodedText;
                 }
-            ).then(() => {
-                resultDiv.innerText = "📷 카메라 작동 중... QR을 비춰주세요.";
-                resultDiv.style.color = "black";
-            }).catch(err => {
-                // 에러 발생 시
-                resultDiv.innerText = "❌ 에러 발생: " + err;
-                resultDiv.style.color = "red";
-                console.error(err);
+            ).catch(err => {
+                alert("카메라 시작 에러: " + err);
             });
+        }
+
+        // [기능 3] 카메라 끄기
+        function stopCam() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    alert("카메라가 중지되었습니다.");
+                });
+            }
         }
     </script>
 </body>
