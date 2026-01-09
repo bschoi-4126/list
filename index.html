@@ -18,6 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -37,6 +38,7 @@
             -webkit-tap-highlight-color: transparent; 
         }
         
+        /* 상단 헤더 */
         .header { 
             background: var(--main-color); 
             color: white; 
@@ -139,7 +141,7 @@
             <button class="btn btn-blue" onclick="document.getElementById('upload-excel').click()">엑셀 업로드</button>
             <input type="file" id="upload-excel" accept=".xlsx" style="display:none" onchange="handleFileUpload(event)">
         </div>
-        <button class="btn btn-red" onclick="generateAllQRs()">QR 코드 일괄 생성 (ZIP)</button>
+        <button class="btn btn-red" onclick="generatePDF()">📄 QR 코드 전체 생성 (PDF A4-63)</button>
         <div id="qr-status" style="font-size:11px; color:#666; margin-top:5px; text-align: center;"></div>
         
         <div style="margin-top:20px; padding-top:15px; border-top:1px solid #ddd;">
@@ -191,8 +193,8 @@ function showToast(message) {
 window.onload = function() {
     loadFromServer();
     if(localStorage.getItem('gh_token')) document.getElementById('gh-token').value = localStorage.getItem('gh_token');
-    history.pushState(null, null, location.href);
-    window.onpopstate = () => { customBack(); history.pushState(null, null, location.href); };
+    history.pushState({page: "main"}, null, location.href);
+    window.onpopstate = () => { customBack(); };
 };
 
 function updateStatus(msg, bg) {
@@ -342,8 +344,9 @@ function customBack() {
     if (input.value !== "") {
         input.value = "";
         filterTable();
+        history.pushState({page: "main"}, null, location.href);
     } else {
-        if(confirm("앱을 종료하시겠습니까?")) window.close();
+        showToast("종료하려면 뒤로가기 버튼을 한 번 더 누르세요.");
     }
 }
 
@@ -432,25 +435,61 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "리스트.xlsx");
 }
 
-async function generateAllQRs() {
-    const zip = new JSZip();
+/* [추가] PDF 생성 로직: A4 한 장에 63개(7열x9행) QR 및 ID 표시 */
+async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
     const qrDiv = document.getElementById('qrcode-hidden');
     const status = document.getElementById('qr-status');
+    
+    // A4 규격: 210 x 297mm
+    const margin = 10;
+    const cols = 7;
+    const rows = 9;
+    const itemsPerPage = cols * rows; // 63개
+    
+    const cellWidth = (210 - (margin * 2)) / cols; // 약 27mm
+    const cellHeight = (297 - (margin * 2)) / rows; // 약 30.7mm
+    const qrSize = cellWidth * 0.75; // QR 크기 조정
+
     for (let i = 0; i < inventoryData.length; i++) {
         let id = String(inventoryData[i]['위치ID']);
-        if(!id || id.length < 1) continue;
+        if (!id || id.length < 1) continue;
+
+        // 63개마다 페이지 추가
+        if (i > 0 && i % itemsPerPage === 0) {
+            doc.addPage();
+        }
+
+        // 현재 페이지 내 위치 계산
+        const idxInPage = i % itemsPerPage;
+        const col = idxInPage % cols;
+        const row = Math.floor(idxInPage / cols);
+        
+        const x = margin + (col * cellWidth);
+        const y = margin + (row * cellHeight);
+
+        // QR 생성 (보이지 않는 곳에 임시 렌더링)
         qrDiv.innerHTML = "";
-        new QRCode(qrDiv, { text: id, width: 250, height: 250 });
+        new QRCode(qrDiv, { text: id, width: 200, height: 200 });
+        
+        // 렌더링 대기
         await new Promise(r => setTimeout(r, 60));
         const img = qrDiv.querySelector('img');
-        if(img) zip.file(`QR_${id}.png`, img.src.split(',')[1], {base64: true});
-        status.innerText = `QR 생성 중... (${i+1}/${inventoryData.length})`;
+        
+        if (img) {
+            // ID 텍스트 표시
+            doc.setFontSize(7);
+            doc.text(id, x + (cellWidth / 2), y + 5, { align: "center" });
+            // QR 이미지 표시
+            doc.addImage(img.src, 'PNG', x + (cellWidth - qrSize) / 2, y + 7, qrSize, qrSize);
+        }
+
+        status.innerText = `PDF 생성 중... (${i + 1}/${inventoryData.length})`;
     }
-    zip.generateAsync({type:"blob"}).then(blob => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "QR_Codes.zip"; a.click();
-        status.innerText = "✅ 다운로드 완료!";
-    });
+
+    doc.save("QR_Codes_A4_63.pdf");
+    status.innerText = "✅ PDF 다운로드 완료!";
 }
 </script>
 </body>
